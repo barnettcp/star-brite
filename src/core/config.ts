@@ -17,8 +17,8 @@ export const config = {
   },
   constellation: {
     baseSizeUnits: 60,
-    scaleMin: 0.8,
-    scaleMax: 1.3,
+    scaleMin: 1,
+    scaleMax: 1,
     randomRotation: true,
     maxPlacementAttempts: 200,
     shrinkFactor: 0.9,

@@ -38,8 +38,8 @@ export function generateSkyModel(
   const starPoints = target.stars.map((star) => ({ x: star.x, y: star.y }));
   const targetCentroid = centroid(starPoints);
   const baseScale = mergedConfig.constellation.baseSizeUnits / 100;
-  const scale = rng.place() * (mergedConfig.constellation.scaleMax - mergedConfig.constellation.scaleMin) + mergedConfig.constellation.scaleMin;
-  const rotation = rng.place() * Math.PI * 2;
+  const scale = mergedConfig.constellation.scaleMin;
+  const rotation = mergedConfig.constellation.randomRotation ? rng.place() * Math.PI * 2 : 0;
 
   const memberStars: SkyStar[] = target.stars.map((star) => {
     const relative = rotatePoint(scalePoint({ x: star.x - targetCentroid.x, y: star.y - targetCentroid.y }, baseScale * scale), rotation);
