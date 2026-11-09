@@ -42,7 +42,6 @@ Thumbs.db
 *.swo
 
 # Local-only notes and scratch space
-
 .local/
 
 # Note: package-lock.json is intentionally NOT ignored; commit it for reproducible installs.
