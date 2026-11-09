@@ -1,10 +1,47 @@
-// Tunable defaults for generation and layout.
+// Tunable defaults for generation, spacing, and interaction.
 
 export const config = {
-  skyWidthUnits: 100,
-  skyHeightUnits: 100,
-  starDensity: 1,
-  hitRadiusPx: 20,
+  sky: {
+    widthUnits: 200,
+    density: 2,
+    edgeMarginUnits: 4,
+  },
+  decoys: {
+    minDistanceUnits: 8,
+    minDistanceFromMembersUnits: 10,
+    enforceTapSpacing: true,
+    sizeMin: 1,
+    sizeMax: 3,
+    sizeSkew: 1,
+    maxAttemptsFactor: 30,
+  },
+  constellation: {
+    baseSizeUnits: 60,
+    scaleMin: 0.8,
+    scaleMax: 1.3,
+    randomRotation: true,
+    maxPlacementAttempts: 200,
+    shrinkFactor: 0.9,
+    scaleFloor: 0.5,
+  },
+  stars: {
+    radiusPerSizeUnits: 0.9,
+    minDrawnRadiusPx: 2,
+  },
+  input: {
+    hitRadiusPx: 22,
+    tapMovePx: 10,
+  },
+  layout: {
+    scoreZonePx: { width: 240, height: 96 },
+    cardFraction: 0.28,
+    cardMinPx: 120,
+    cardMaxPx: 180,
+    hudInsetPx: 12,
+  },
+  render: {
+    maxDpr: 3,
+  },
 };
 
 export type Config = typeof config;

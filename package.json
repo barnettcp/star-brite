@@ -13,6 +13,7 @@
     "check:release": "node scripts/check-release.mjs"
   },
   "devDependencies": {
+    "@types/node": "^26.6.6",
     "typescript": "^5.7.3",
     "vite": "^5.4.11",
     "vitest": "^2.1.8"
