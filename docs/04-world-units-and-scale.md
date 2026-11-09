@@ -62,8 +62,8 @@ All values are starting points. The calibration sweep (08) is what establishes r
 
 | Key | Default | Meaning |
 |-----|---------|---------|
-| `decoys.minDistanceUnits` | 8 | Minimum distance between two decoys. **Tunable per request [Decided].** |
-| `decoys.minDistanceFromMembersUnits` | 10 | Minimum distance from any decoy to any member star. |
+| `decoys.minDistanceUnits` | 11 | Minimum distance between two decoys. **Validated by the calibration sweep.** |
+| `decoys.minDistanceFromMembersUnits` | 11 | Minimum distance from any decoy to any member star. |
 | `decoys.enforceTapSpacing` | true | Effective minimums = `max(configured, input.hitRadiusPx / pxPerUnit)`. |
 | `decoys.sizeMin` / `decoys.sizeMax` | 1.0 / 3.0 | Same range as authored member sizes, so size is not a giveaway. |
 | `decoys.sizeSkew` | 1.0 | Decoy size = `sizeMin + (sizeMax − sizeMin) × u^skew`, `u` uniform in [0,1). 1.0 = uniform; above 1 favors small stars. |
@@ -74,7 +74,7 @@ All values are starting points. The calibration sweep (08) is what establishes r
 | Key | Default | Meaning |
 |-----|---------|---------|
 | `constellation.baseSizeUnits` | 60 | World units spanned by the canonical 100-box at multiplier 1.0. |
-| `constellation.scaleMin` / `constellation.scaleMax` | 0.8 / 1.3 | Random uniform multiplier range. **[Decided]** (random scale within bounds) |
+| `constellation.scaleMin` / `constellation.scaleMax` | 1.0 / 1.0 | Fixed placement scale to preserve the authored relative star sizes in the target pattern. |
 | `constellation.randomRotation` | true | Random rotation 0–360°. Turn off for debugging. **[Decided]** |
 | `constellation.maxPlacementAttempts` | 200 | Attempts per scale level before shrinking. |
 | `constellation.shrinkFactor` | 0.9 | Multiply the scale by this when placement keeps failing. |
@@ -135,6 +135,8 @@ To be filled in by the calibration sweep (08). The sweep covers viewports 390×8
 
 | widthUnits | density | min distance | placement success | decoy fill ratio | min star spacing (px) | verdict |
 |-----------|---------|--------------|-------------------|------------------|-----------------------|---------|
-| _TBD_ | _TBD_ | _TBD_ | _TBD_ | _TBD_ | _TBD_ | _TBD_ |
+| 200 | 2.0 | 11 | 100% | 1.00 | 23.24 | pass |
+| 200 | 2.0 | 11 | 100% | 1.00 | 35.81 | pass |
+| 200 | 2.0 | 11 | 100% | 1.00 | 76.24 | pass |
 
 Acceptance targets: placement success 100% (no failures after shrink), fill ratio ≥ 0.95, minimum star spacing ≥ `input.hitRadiusPx`.

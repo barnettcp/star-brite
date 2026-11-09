@@ -7,8 +7,8 @@ export const config = {
     edgeMarginUnits: 4,
   },
   decoys: {
-    minDistanceUnits: 8,
-    minDistanceFromMembersUnits: 10,
+    minDistanceUnits: 11,
+    minDistanceFromMembersUnits: 11,
     enforceTapSpacing: true,
     sizeMin: 1,
     sizeMax: 3,
