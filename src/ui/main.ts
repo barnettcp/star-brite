@@ -1,8 +1,10 @@
 import '../style.css';
 
+import { config } from '../core/config';
+import { applyIntent, createGameState } from '../core/game';
 import { generateSkyModel } from '../core/generate';
-import { createGameState } from '../core/game';
 import type { Constellation, GameState } from '../core/types';
+import { hitStarAt } from './input';
 import { renderCard } from './renderCard';
 import { renderHud } from './renderHud';
 import { renderOverlay } from './overlay';
@@ -38,6 +40,13 @@ canvas.id = 'starbrite-canvas';
 canvas.setAttribute('aria-label', 'Starbrite sky');
 app.appendChild(canvas);
 
+const newSkyButton = document.createElement('button');
+newSkyButton.type = 'button';
+newSkyButton.id = 'starbrite-new-sky';
+newSkyButton.textContent = 'New sky';
+newSkyButton.hidden = true;
+app.appendChild(newSkyButton);
+
 const context = canvas.getContext('2d');
 if (context === null) {
   throw new Error('Canvas 2D context is unavailable.');
@@ -45,10 +54,15 @@ if (context === null) {
 
 const ctx = context;
 
-const { sky } = generateSkyModel('demo-seed', [demoConstellation], 1280, 800);
-let state: GameState = createGameState('demo-seed', sky);
+function generateState(seed: string): GameState {
+  const { sky } = generateSkyModel(seed, [demoConstellation], window.innerWidth || 1280, window.innerHeight || 800);
+  return createGameState(seed, sky);
+}
 
-function fitCanvas(): void {
+let state: GameState = generateState('demo-seed');
+let pointerStart: { x: number; y: number } | null = null;
+
+function renderFrame(): void {
   const width = Math.max(document.documentElement.clientWidth || window.innerWidth, 1);
   const height = Math.max(document.documentElement.clientHeight || window.innerHeight, 1);
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -64,7 +78,42 @@ function fitCanvas(): void {
   renderCard(ctx, state, width, height);
   renderHud(ctx, state, width);
   renderOverlay(ctx, state, width, height);
+
+  newSkyButton.hidden = state.status !== 'won';
 }
 
-window.addEventListener('resize', fitCanvas);
-fitCanvas();
+function newGame(seed = crypto.getRandomValues(new Uint32Array(1))[0].toString(36)) {
+  state = generateState(seed);
+  renderFrame();
+}
+
+canvas.addEventListener('pointerdown', (event) => {
+  pointerStart = { x: event.clientX, y: event.clientY };
+});
+
+canvas.addEventListener('pointerup', (event) => {
+  if (!pointerStart) {
+    return;
+  }
+
+  const dx = event.clientX - pointerStart.x;
+  const dy = event.clientY - pointerStart.y;
+  pointerStart = null;
+
+  if (Math.hypot(dx, dy) > config.input.tapMovePx) {
+    return;
+  }
+
+  const transform = getWorldTransform(state.sky, canvas.width / Math.min(window.devicePixelRatio || 1, 2), canvas.height / Math.min(window.devicePixelRatio || 1, 2));
+  const hitId = hitStarAt(state, event.clientX, event.clientY, transform);
+  state = applyIntent(state, hitId === null ? { type: 'tapEmpty' } : { type: 'tapStar', starId: hitId });
+  renderFrame();
+});
+
+canvas.addEventListener('pointerleave', () => {
+  pointerStart = null;
+});
+
+newSkyButton.addEventListener('click', () => newGame());
+window.addEventListener('resize', renderFrame);
+renderFrame();

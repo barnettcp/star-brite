@@ -23,7 +23,10 @@ body {
 }
 
 #app {
+  position: relative;
   display: block;
+  width: 100%;
+  height: 100%;
 }
 
 #starbrite-canvas {
@@ -32,4 +35,18 @@ body {
   height: 100vh;
   background: #020b1a;
   touch-action: none;
+}
+
+#starbrite-new-sky {
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
+  z-index: 3;
+  padding: 0.7rem 1.1rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  background: rgba(12, 18, 30, 0.78);
+  color: #f4f1e6;
+  font: inherit;
+  cursor: pointer;
 }

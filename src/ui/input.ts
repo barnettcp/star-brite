@@ -1,9 +1,9 @@
-// Helpers for translating pointer positions into world-space hits.
+// Helpers for translating pointer positions into star hits in screen space.
 
 import { config } from '../core/config';
 import { hitTest } from '../core/hit';
 import type { GameState } from '../core/types';
-import type { ScreenTransform } from './transform';
+import { worldToScreen, type ScreenTransform } from './transform';
 
 export function screenToWorld(x: number, y: number, transform: ScreenTransform): { x: number; y: number } {
   return {
@@ -18,13 +18,15 @@ export function hitStarAt(
   screenY: number,
   transform: ScreenTransform,
 ): string | null {
-  const worldPoint = screenToWorld(screenX, screenY, transform);
-  const candidates = state.sky.stars.map((star) => ({
-    id: star.id,
-    x: star.x,
-    y: star.y,
-    radius: Math.max(config.stars.minDrawnRadiusPx, star.radius),
-  }));
+  const candidates = state.sky.stars.map((star) => {
+    const point = worldToScreen(star.x, star.y, transform);
+    return {
+      id: star.id,
+      x: point.x,
+      y: point.y,
+      radius: Math.max(config.input.hitRadiusPx, star.radius * transform.scale),
+    };
+  });
 
-  return hitTest(candidates, worldPoint.x, worldPoint.y, config.input.hitRadiusPx);
+  return hitTest(candidates, screenX, screenY, config.input.hitRadiusPx);
 }
