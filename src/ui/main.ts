@@ -6,7 +6,7 @@ import { generateSkyModel } from '../core/generate';
 import type { Constellation, GameState } from '../core/types';
 import { loadConstellations } from '../data/load';
 import { hitStarAt } from './input';
-import { getConstellationOverride, getRuntimeConfigOverrides, getSeedFromSearch } from './params';
+import { getConstellationOverride, getDebugFlags, getRuntimeConfigOverrides, getSeedFromSearch } from './params';
 import { renderCard } from './renderCard';
 import { renderHud } from './renderHud';
 import { renderOverlay } from './overlay';
@@ -45,11 +45,12 @@ if (context === null) {
 const ctx = context;
 const startupSeed = getSeedFromSearch();
 const forcedConstellationId = getConstellationOverride();
+const debugFlags = getDebugFlags();
 let constellationPool: Constellation[] = [];
 let loadingError: string | null = null;
 let state: GameState | null = null;
 let pointerStart: { x: number; y: number } | null = null;
-let highlightConstellation = false;
+let highlightConstellation = debugFlags.highlightConstellation;
 
 function generateState(seed: string, constellations: Constellation[]): GameState {
   const { sky } = generateSkyModel(
@@ -115,7 +116,7 @@ function renderFrame(): void {
   if (loadingError !== null || state === null) {
     renderLoadingMessage(loadingError ?? 'Loading constellations...');
     newSkyButton.hidden = true;
-    constellationToggle.hidden = true;
+    constellationToggle.hidden = !debugFlags.debugEnabled;
     return;
   }
 
@@ -127,7 +128,7 @@ function renderFrame(): void {
 
   updateConstellationToggle();
   newSkyButton.hidden = state.status !== 'won';
-  constellationToggle.hidden = false;
+  constellationToggle.hidden = !debugFlags.debugEnabled;
 }
 
 function newGame(seed = getSeedFromSearch()) {
@@ -150,7 +151,9 @@ function newGame(seed = getSeedFromSearch()) {
   }
 
   state = generateState(seed, pool);
-  logConstellationPlacement(state);
+  if (debugFlags.logPlacement) {
+    logConstellationPlacement(state);
+  }
   renderFrame();
 }
 
