@@ -30,6 +30,13 @@ newSkyButton.textContent = 'New sky';
 newSkyButton.hidden = true;
 app.appendChild(newSkyButton);
 
+const constellationToggle = document.createElement('button');
+constellationToggle.type = 'button';
+constellationToggle.id = 'starbrite-toggle-constellation';
+constellationToggle.hidden = true;
+constellationToggle.setAttribute('aria-pressed', 'false');
+app.appendChild(constellationToggle);
+
 const context = canvas.getContext('2d');
 if (context === null) {
   throw new Error('Canvas 2D context is unavailable.');
@@ -42,6 +49,7 @@ let constellationPool: Constellation[] = [];
 let loadingError: string | null = null;
 let state: GameState | null = null;
 let pointerStart: { x: number; y: number } | null = null;
+let highlightConstellation = false;
 
 function generateState(seed: string, constellations: Constellation[]): GameState {
   const { sky } = generateSkyModel(
@@ -70,6 +78,29 @@ function renderLoadingMessage(message: string): void {
   ctx.fillText(message, width / 2, height / 2 + 20);
 }
 
+function updateConstellationToggle(): void {
+  constellationToggle.textContent = highlightConstellation ? 'Hide debug highlight' : 'Highlight constellation';
+  constellationToggle.setAttribute('aria-pressed', String(highlightConstellation));
+}
+
+function logConstellationPlacement(currentState: GameState): void {
+  const members = currentState.sky.stars.filter((star) => star.kind === 'member');
+  if (members.length === 0) {
+    return;
+  }
+
+  console.groupCollapsed(`Constellation placement: ${currentState.sky.target.constellationId}`);
+  console.log('seed', currentState.seed);
+  console.log('placement', { ...currentState.sky.target.placement, center: { x: currentState.sky.target.placement.centerX, y: currentState.sky.target.placement.centerY } });
+  console.table(members.map((star) => ({
+    id: star.localId ?? star.id,
+    x: Number(star.x.toFixed(3)),
+    y: Number(star.y.toFixed(3)),
+    radius: Number(star.radius.toFixed(3)),
+  })));
+  console.groupEnd();
+}
+
 function renderFrame(): void {
   const width = Math.max(document.documentElement.clientWidth || window.innerWidth, 1);
   const height = Math.max(document.documentElement.clientHeight || window.innerHeight, 1);
@@ -84,16 +115,19 @@ function renderFrame(): void {
   if (loadingError !== null || state === null) {
     renderLoadingMessage(loadingError ?? 'Loading constellations...');
     newSkyButton.hidden = true;
+    constellationToggle.hidden = true;
     return;
   }
 
   const transform = getWorldTransform(state.sky, width, height);
-  renderSky(ctx, state, transform, width, height);
+  renderSky(ctx, state, transform, width, height, highlightConstellation);
   renderCard(ctx, state, width, height);
   renderHud(ctx, state, width);
   renderOverlay(ctx, state, width, height);
 
+  updateConstellationToggle();
   newSkyButton.hidden = state.status !== 'won';
+  constellationToggle.hidden = false;
 }
 
 function newGame(seed = getSeedFromSearch()) {
@@ -116,6 +150,7 @@ function newGame(seed = getSeedFromSearch()) {
   }
 
   state = generateState(seed, pool);
+  logConstellationPlacement(state);
   renderFrame();
 }
 
@@ -154,6 +189,11 @@ canvas.addEventListener('pointerleave', () => {
 });
 
 newSkyButton.addEventListener('click', () => newGame(getSeedFromSearch()));
+constellationToggle.addEventListener('click', () => {
+  highlightConstellation = !highlightConstellation;
+  updateConstellationToggle();
+  renderFrame();
+});
 window.addEventListener('resize', renderFrame);
 
 void (async () => {

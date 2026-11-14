@@ -5,6 +5,7 @@ export const theme = {
   starIdle: '#fff6d6',
   starFound: '#ffd60a',
   starRuledOut: '#a7a69c',
+  starDebug: '#ff5f57',
   starSelectedRing: '#ffffff',
   lineColor: '#ffd60a',
   lineOpacity: 0.35,
