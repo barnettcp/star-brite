@@ -38,27 +38,82 @@ export function generateSkyModel(
   const starPoints = target.stars.map((star) => ({ x: star.x, y: star.y }));
   const targetCentroid = centroid(starPoints);
   const baseScale = mergedConfig.constellation.baseSizeUnits / 100;
-  const scale = mergedConfig.constellation.scaleMin;
-  const rotation = mergedConfig.constellation.randomRotation ? rng.place() * Math.PI * 2 : 0;
+  const scaleFloor = mergedConfig.constellation.scaleFloor;
+  const scaleMin = mergedConfig.constellation.scaleMin;
+  const scaleMax = mergedConfig.constellation.scaleMax;
+  const maxPlacementAttempts = Math.max(1, mergedConfig.constellation.maxPlacementAttempts);
+  const shrinkFactor = mergedConfig.constellation.shrinkFactor;
 
-  const memberStars: SkyStar[] = target.stars.map((star) => {
-    const relative = rotatePoint(scalePoint({ x: star.x - targetCentroid.x, y: star.y - targetCentroid.y }, baseScale * scale), rotation);
-    const centerX = widthUnits / 2 + (rng.place() - 0.5) * (widthUnits - 2 * margin);
-    const centerY = heightUnits / 2 + (rng.place() - 0.5) * (heightUnits - 2 * margin);
-    const x = relative.x + centerX;
-    const y = relative.y + centerY;
-    const radius = star.size * mergedConfig.stars.radiusPerSizeUnits;
+  let placementScale = Math.max(scaleFloor, Math.min(scaleMax, scaleMin + (scaleMax - scaleMin) * rng.place()));
+  let placementRotation = mergedConfig.constellation.randomRotation ? rng.place() * Math.PI * 2 : 0;
+  let placementCenterX = widthUnits / 2;
+  let placementCenterY = heightUnits / 2;
+  let memberStars: SkyStar[] | null = null;
 
-    return {
-      id: `m:${target.id}:${star.id}`,
-      x,
-      y,
-      radius,
-      kind: 'member',
-      constellationId: target.id,
-      localId: star.id,
-    };
-  });
+  while (memberStars === null) {
+    for (let attempt = 0; attempt < maxPlacementAttempts; attempt += 1) {
+      const rotation = mergedConfig.constellation.randomRotation ? rng.place() * Math.PI * 2 : 0;
+      const transformedStars = target.stars.map((star) => {
+        const relative = {
+          x: star.x - targetCentroid.x,
+          y: star.y - targetCentroid.y,
+        };
+
+        return rotatePoint(scalePoint(relative, baseScale * placementScale), rotation);
+      });
+
+      const minX = Math.min(...transformedStars.map((point, index) => point.x - (target.stars[index].size * mergedConfig.stars.radiusPerSizeUnits) - margin));
+      const maxX = Math.max(...transformedStars.map((point, index) => point.x + (target.stars[index].size * mergedConfig.stars.radiusPerSizeUnits) + margin));
+      const minY = Math.min(...transformedStars.map((point, index) => point.y - (target.stars[index].size * mergedConfig.stars.radiusPerSizeUnits) - margin));
+      const maxY = Math.max(...transformedStars.map((point, index) => point.y + (target.stars[index].size * mergedConfig.stars.radiusPerSizeUnits) + margin));
+
+      const xRangeStart = margin - minX;
+      const xRangeEnd = widthUnits - margin - maxX;
+      const yRangeStart = margin - minY;
+      const yRangeEnd = heightUnits - margin - maxY;
+
+      if (xRangeStart <= xRangeEnd && yRangeStart <= yRangeEnd) {
+        const centerX = xRangeStart + rng.place() * Math.max(0, xRangeEnd - xRangeStart);
+        const centerY = yRangeStart + rng.place() * Math.max(0, yRangeEnd - yRangeStart);
+
+        memberStars = target.stars.map((star, index) => {
+          const relative = rotatePoint(scalePoint({
+            x: star.x - targetCentroid.x,
+            y: star.y - targetCentroid.y,
+          }, baseScale * placementScale), rotation);
+          const radius = star.size * mergedConfig.stars.radiusPerSizeUnits;
+
+          return {
+            id: `m:${target.id}:${star.id}`,
+            x: relative.x + centerX,
+            y: relative.y + centerY,
+            radius,
+            kind: 'member',
+            constellationId: target.id,
+            localId: star.id,
+          };
+        });
+
+        placementRotation = rotation;
+        placementCenterX = centerX;
+        placementCenterY = centerY;
+        break;
+      }
+    }
+
+    if (memberStars !== null) {
+      break;
+    }
+
+    placementScale *= shrinkFactor;
+    if (placementScale < scaleFloor) {
+      throw new Error(`Unable to place constellation ${target.id} within the sky with scale floor ${scaleFloor}; scale range was ${scaleMin}..${scaleMax}.`);
+    }
+  }
+
+  if (memberStars === null) {
+    throw new Error(`Unable to place constellation ${target.id} within the sky.`);
+  }
 
   const area = widthUnits * heightUnits;
   const targetDecoys = Math.max(0, Math.round(mergedConfig.sky.density * area / 1000));
@@ -117,10 +172,10 @@ export function generateSkyModel(
         `m:${target.id}:${second}`,
       ]),
       placement: {
-        rotation,
-        scale,
-        centerX: widthUnits / 2,
-        centerY: heightUnits / 2,
+        rotation: placementRotation,
+        scale: placementScale,
+        centerX: placementCenterX,
+        centerY: placementCenterY,
       },
     },
   };
@@ -129,8 +184,8 @@ export function generateSkyModel(
     seed,
     targetId: target.id,
     decoyCount: decoyStars.length,
-    scale,
-    rotation,
+    scale: placementScale,
+    rotation: placementRotation,
     warnings: [],
   };
 

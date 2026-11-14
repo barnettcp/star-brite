@@ -83,6 +83,31 @@ describe('generation invariants', () => {
       expect(star.y).toBeLessThanOrEqual(sky.heightUnits - margin);
     }
   });
+
+  it('keeps a wide target constellation inside the sky for many seeds', () => {
+    const wideConstellation: Constellation = {
+      id: 'wide',
+      name: 'Wide',
+      stars: [
+        { id: 'a', x: 0, y: 35, size: 2 },
+        { id: 'b', x: 100, y: 30, size: 2.5 },
+        { id: 'c', x: 50, y: 100, size: 2 },
+        { id: 'd', x: 100, y: 80, size: 1.5 },
+      ],
+      edges: [['a', 'b'], ['b', 'c'], ['c', 'd']],
+    };
+    const margin = config.sky.edgeMarginUnits;
+
+    for (let i = 0; i < 100; i += 1) {
+      const { sky } = generateSkyModel(`placement-check-${i}`, [wideConstellation], 600, 800);
+      for (const star of sky.stars.filter((candidate) => candidate.kind === 'member')) {
+        expect(star.x).toBeGreaterThanOrEqual(margin);
+        expect(star.x).toBeLessThanOrEqual(config.sky.widthUnits - margin);
+        expect(star.y).toBeGreaterThanOrEqual(margin);
+        expect(star.y).toBeLessThanOrEqual(sky.heightUnits - margin);
+      }
+    }
+  });
 });
 
 describe('game flow', () => {
