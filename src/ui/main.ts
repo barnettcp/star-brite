@@ -120,14 +120,16 @@ function renderFrame(): void {
     return;
   }
 
-  const transform = getWorldTransform(state.sky, width, height);
-  renderSky(ctx, state, transform, width, height, highlightConstellation);
-  renderCard(ctx, state, width, height);
-  renderHud(ctx, state, width, height);
-  renderOverlay(ctx, state, width, height);
+  const currentState = state;
+  const transform = getWorldTransform(currentState.sky, width, height);
+  const highlightedConstellation = constellationPool.find((constellation) => constellation.id === currentState.sky.target.constellationId) ?? null;
+  renderSky(ctx, currentState, transform, width, height, highlightConstellation);
+  renderCard(ctx, currentState, width, height, highlightedConstellation);
+  renderHud(ctx, currentState, width, height);
+  renderOverlay(ctx, currentState, width, height);
 
   updateConstellationToggle();
-  newSkyButton.hidden = state.status !== 'won';
+  newSkyButton.hidden = currentState.status !== 'won';
   constellationToggle.hidden = !debugFlags.debugEnabled;
 }
 

@@ -1,7 +1,7 @@
 // Render the target pattern card with a board-game framing.
 
 import { config } from '../core/config';
-import type { GameState } from '../core/types';
+import type { Constellation, GameState } from '../core/types';
 import { theme } from './theme';
 import { getCardBox } from './transform';
 
@@ -31,22 +31,38 @@ export function renderCard(
   state: GameState,
   viewportWidth: number,
   viewportHeight: number,
+  constellation?: Constellation | null,
 ): void {
-  const memberStars = state.sky.stars.filter((star) => star.kind === 'member');
-  if (memberStars.length === 0) {
+  const candidate = constellation ?? {
+    id: state.sky.target.constellationId,
+    name: state.sky.target.name,
+    stars: state.sky.stars.filter((star) => star.kind === 'member').map((star) => ({
+      id: star.localId ?? star.id,
+      x: star.x,
+      y: star.y,
+      size: Math.max(1, Math.round(star.radius / 3)),
+    })),
+    edges: state.sky.target.edges.map(([first, second]) => [first.replace(/^m:[^:]+:/, ''), second.replace(/^m:[^:]+:/, '')]),
+  };
+
+  if (candidate.stars.length === 0) {
     return;
   }
 
   const box = getCardBox(viewportWidth, viewportHeight);
-  const margin = 16;
-  const innerWidth = box.size - margin * 2;
-  const minX = Math.min(...memberStars.map((star) => star.x));
-  const maxX = Math.max(...memberStars.map((star) => star.x));
-  const minY = Math.min(...memberStars.map((star) => star.y));
-  const maxY = Math.max(...memberStars.map((star) => star.y));
-  const width = maxX - minX || 1;
-  const height = maxY - minY || 1;
-  const scale = Math.min((innerWidth - 16) / width, (innerWidth - 16) / height);
+  const inset = 16;
+  const patternInset = 22;
+  const contentWidth = box.size - inset * 2;
+  const minX = Math.min(...candidate.stars.map((star) => star.x));
+  const maxX = Math.max(...candidate.stars.map((star) => star.x));
+  const minY = Math.min(...candidate.stars.map((star) => star.y));
+  const maxY = Math.max(...candidate.stars.map((star) => star.y));
+  const spanX = Math.max(maxX - minX, 1);
+  const spanY = Math.max(maxY - minY, 1);
+  const patternSize = Math.min(contentWidth - patternInset * 2, box.size - 54);
+  const xScale = patternSize / spanX;
+  const yScale = patternSize / spanY;
+  const fitScale = Math.min(xScale, yScale);
 
   ctx.save();
   ctx.shadowColor = 'rgba(110, 156, 255, 0.16)';
@@ -67,36 +83,35 @@ export function renderCard(
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
   ctx.font = `700 13px ${theme.fontFamily}`;
-  ctx.fillText((state.sky.target.name || 'Pattern').toUpperCase(), box.x + 18, box.y + 18);
+  ctx.fillText((candidate.name || 'Pattern').toUpperCase(), box.x + 18, box.y + 18);
 
-  const patternX = box.x + margin;
-  const patternY = box.y + 34;
-  const patternSize = innerWidth;
+  const patternX = box.x + inset + (contentWidth - patternSize) / 2;
+  const patternY = box.y + 38 + (contentWidth - patternSize) / 2;
 
-  for (const [first, second] of state.sky.target.edges) {
-    const firstStar = memberStars.find((star) => star.id === first);
-    const secondStar = memberStars.find((star) => star.id === second);
+  for (const [firstId, secondId] of candidate.edges) {
+    const firstStar = candidate.stars.find((star) => star.id === firstId);
+    const secondStar = candidate.stars.find((star) => star.id === secondId);
     if (!firstStar || !secondStar) {
       continue;
     }
 
-    const startX = patternX + ((firstStar.x - minX) / width) * patternSize;
-    const startY = patternY + ((firstStar.y - minY) / height) * patternSize;
-    const endX = patternX + ((secondStar.x - minX) / width) * patternSize;
-    const endY = patternY + ((secondStar.y - minY) / height) * patternSize;
+    const startX = patternX + (firstStar.x - minX) * fitScale;
+    const startY = patternY + (firstStar.y - minY) * fitScale;
+    const endX = patternX + (secondStar.x - minX) * fitScale;
+    const endY = patternY + (secondStar.y - minY) * fitScale;
 
     ctx.beginPath();
     ctx.moveTo(startX, startY);
     ctx.lineTo(endX, endY);
-    ctx.strokeStyle = 'rgba(235, 217, 141, 0.6)';
+    ctx.strokeStyle = 'rgba(235, 217, 141, 0.7)';
     ctx.lineWidth = 1.2;
     ctx.stroke();
   }
 
-  for (const star of memberStars) {
-    const x = patternX + ((star.x - minX) / width) * patternSize;
-    const y = patternY + ((star.y - minY) / height) * patternSize;
-    const radius = Math.max(config.stars.minDrawnRadiusPx, star.radius * scale * 0.9);
+  for (const star of candidate.stars) {
+    const x = patternX + (star.x - minX) * fitScale;
+    const y = patternY + (star.y - minY) * fitScale;
+    const radius = Math.max(config.stars.minDrawnRadiusPx, star.size * 2.5);
 
     ctx.beginPath();
     ctx.arc(x, y, radius, 0, Math.PI * 2);
