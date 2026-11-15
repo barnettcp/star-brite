@@ -31,9 +31,11 @@ export function worldToScreen(x: number, y: number, transform: ScreenTransform):
 export function getCardBox(viewportWidth: number, viewportHeight: number): { x: number; y: number; size: number } {
   const side = Math.min(viewportWidth, viewportHeight) * 0.24;
   const size = Math.min(Math.max(side, 150), 210);
+  const topBarHeight = 76;
+  const gap = 24;
   return {
     x: Math.max(18, viewportWidth - size - 22),
-    y: 92,
+    y: topBarHeight + gap + 18,
     size,
   };
 }

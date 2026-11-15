@@ -38,9 +38,10 @@ export function renderHud(
   const barX = 18;
   const barY = 18;
   const barWidth = Math.max(viewportWidth - 36, 240);
-  const barHeight = 72;
-  const scoreWidth = 170;
+  const barHeight = 76;
+  const scoreWidth = 176;
   const scoreX = Math.max(barX + barWidth - scoreWidth - 18, 0);
+  const scoreY = barY + 12;
   const parText = `Par ${Math.max(5, Math.ceil(state.sky.target.starIds.length / 2))}`;
 
   ctx.save();
@@ -55,13 +56,13 @@ export function renderHud(
   ctx.stroke();
 
   const logoX = barX + 20;
-  const logoY = barY + 14;
-  const logoSize = 38;
+  const logoY = barY + 18;
+  const logoSize = 34;
   if (logoImage && logoImage.complete) {
     ctx.drawImage(logoImage, logoX, logoY, logoSize, logoSize);
   } else {
     ctx.fillStyle = theme.accentGold;
-    roundedRect(ctx, logoX, logoY, logoSize, logoSize, 12);
+    roundedRect(ctx, logoX, logoY, logoSize, logoSize, 10);
     ctx.fill();
     ctx.fillStyle = '#0b1220';
     ctx.font = `700 18px ${theme.fontFamily}`;
@@ -72,34 +73,34 @@ export function renderHud(
 
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
-  ctx.font = `700 30px ${theme.fontFamily}`;
+  ctx.font = `700 28px ${theme.fontFamily}`;
   ctx.fillStyle = theme.hudText;
-  ctx.fillText('STAR BRITE', logoX + logoSize + 16, barY + barHeight / 2 - 2);
+  ctx.fillText('STAR BRITE', logoX + logoSize + 16, barY + 27);
 
-  roundedRect(ctx, scoreX, barY + 12, scoreWidth, barHeight - 24, 14);
+  roundedRect(ctx, scoreX, scoreY, scoreWidth, barHeight - 24, 14);
   ctx.fillStyle = 'rgba(18, 28, 47, 0.9)';
   ctx.fill();
   ctx.strokeStyle = 'rgba(146, 180, 255, 0.18)';
   ctx.stroke();
 
   const scoreText = `${state.moves}`;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
   ctx.font = `700 26px ${theme.fontFamily}`;
   ctx.fillStyle = theme.accentGold;
-  ctx.fillText(scoreText, scoreX + 18, barY + 31);
+  ctx.fillText(scoreText, scoreX + 18, scoreY + 18);
 
-  const scoreLabelX = scoreX + 54;
-  const scoreLabelY = barY + 32;
   ctx.font = `600 11px ${theme.fontFamily}`;
   ctx.fillStyle = theme.hudMuted;
-  ctx.fillText('moves', scoreLabelX, scoreLabelY + 6);
+  ctx.fillText('moves', scoreX + 18, scoreY + 39);
 
-  ctx.font = `600 12px ${theme.fontFamily}`;
+  ctx.font = `700 18px ${theme.fontFamily}`;
   ctx.fillStyle = theme.hudText;
-  ctx.fillText(parText, scoreX + 18, barY + 53);
+  ctx.fillText(parText, scoreX + 96, scoreY + 18);
 
   ctx.font = `600 11px ${theme.fontFamily}`;
   ctx.fillStyle = theme.hudMuted;
-  ctx.fillText('status', scoreX + 110, barY + 53);
+  ctx.fillText('goal', scoreX + 96, scoreY + 38);
 
   ctx.restore();
 }

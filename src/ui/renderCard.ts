@@ -77,10 +77,10 @@ export function renderCard(
   }
 
   const box = getCardBox(viewportWidth, viewportHeight);
-  const headerHeight = 42;
-  const footerHeight = 26;
+  const headerHeight = 46;
+  const footerHeight = 28;
   const patternInset = 20;
-  const mainArea = box.size - headerHeight - footerHeight - 16;
+  const mainArea = box.size - headerHeight - footerHeight - 18;
   const patternSize = Math.max(72, mainArea - patternInset * 2);
   const minX = Math.min(...candidate.stars.map((star) => star.x));
   const maxX = Math.max(...candidate.stars.map((star) => star.x));
@@ -94,25 +94,32 @@ export function renderCard(
 
   ctx.save();
   const gradient = ctx.createLinearGradient(box.x, box.y, box.x + box.size, box.y + box.size);
-  gradient.addColorStop(0, 'rgba(18, 28, 44, 0.96)');
-  gradient.addColorStop(1, 'rgba(9, 14, 25, 0.98)');
-  ctx.shadowColor = 'rgba(110, 156, 255, 0.16)';
-  ctx.shadowBlur = 18;
+  gradient.addColorStop(0, 'rgba(18, 28, 44, 0.98)');
+  gradient.addColorStop(1, 'rgba(9, 14, 25, 0.99)');
+  ctx.shadowColor = 'rgba(110, 156, 255, 0.18)';
+  ctx.shadowBlur = 22;
   roundedRect(ctx, box.x, box.y, box.size, box.size + 6, 18);
   ctx.fillStyle = gradient;
   ctx.fill();
   ctx.shadowBlur = 0;
   ctx.strokeStyle = theme.cardBorder;
-  ctx.lineWidth = 1.1;
+  ctx.lineWidth = 1.2;
   ctx.stroke();
 
-  ctx.fillStyle = 'rgba(132, 167, 255, 0.08)';
+  ctx.fillStyle = theme.cardInner;
   roundedRect(ctx, box.x + 8, box.y + 8, box.size - 16, box.size - 16, 14);
   ctx.fill();
 
-  ctx.fillStyle = 'rgba(18, 31, 52, 0.8)';
+  ctx.fillStyle = 'rgba(18, 31, 52, 0.82)';
   roundedRect(ctx, box.x + 10, box.y + 10, box.size - 20, headerHeight - 8, 12);
   ctx.fill();
+
+  ctx.strokeStyle = 'rgba(140, 170, 255, 0.2)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(box.x + 18, box.y + 38);
+  ctx.lineTo(box.x + box.size - 18, box.y + 38);
+  ctx.stroke();
 
   ctx.fillStyle = theme.cardTitle;
   ctx.textAlign = 'left';
@@ -126,7 +133,7 @@ export function renderCard(
   });
 
   const patternX = box.x + (box.size - patternSize) / 2;
-  const patternY = box.y + headerHeight + 10 + (mainArea - patternSize) / 2;
+  const patternY = box.y + headerHeight + 8 + (mainArea - patternSize) / 2;
 
   for (const [firstId, secondId] of candidate.edges) {
     const firstStar = candidate.stars.find((star) => star.id === firstId);
@@ -166,6 +173,6 @@ export function renderCard(
   ctx.fillStyle = theme.hudMuted;
   ctx.font = `600 10px ${theme.fontFamily}`;
   ctx.textAlign = 'left';
-  ctx.fillText('reference pattern', box.x + 18, box.y + box.size - 13);
+  ctx.fillText('reference pattern', box.x + 18, box.y + box.size - 12);
   ctx.restore();
 }
