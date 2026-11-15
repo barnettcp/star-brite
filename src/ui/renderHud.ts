@@ -56,8 +56,8 @@ export function renderHud(
   ctx.stroke();
 
   const logoX = barX + 20;
-  const logoY = barY + 18;
-  const logoSize = 34;
+  const logoY = barY + (barHeight - 42) / 2;
+  const logoSize = 42;
   if (logoImage && logoImage.complete) {
     ctx.drawImage(logoImage, logoX, logoY, logoSize, logoSize);
   } else {
@@ -75,7 +75,7 @@ export function renderHud(
   ctx.textBaseline = 'middle';
   ctx.font = `700 28px ${theme.fontFamily}`;
   ctx.fillStyle = theme.hudText;
-  ctx.fillText('STAR BRITE', logoX + logoSize + 16, barY + 27);
+  ctx.fillText('STAR BRITE', logoX + logoSize + 18, barY + barHeight / 2);
 
   roundedRect(ctx, scoreX, scoreY, scoreWidth, barHeight - 24, 14);
   ctx.fillStyle = 'rgba(18, 28, 47, 0.9)';
