@@ -81,6 +81,7 @@ body {
   height: 100%;
   display: flex;
   flex-direction: column;
+  min-height: 0;
   background: linear-gradient(180deg, rgba(6, 15, 25, 0.96) 0%, rgba(10, 18, 31, 0.98) 100%);
   color: var(--cat-text);
 }
@@ -143,11 +144,14 @@ body {
 
 .cat-layout {
   display: grid;
-  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr) minmax(220px, 280px);
+  grid-template-columns: minmax(180px, 220px) minmax(0, 1fr) minmax(180px, 220px);
   gap: 1rem;
   padding: 1rem;
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
+  width: 100%;
+  height: 100%;
+  align-items: stretch;
 }
 
 .cat-panel,
@@ -163,6 +167,7 @@ body {
   flex-direction: column;
   gap: 1rem;
   padding: 1rem;
+  min-height: 0;
 }
 
 .cat-panel-section {
@@ -261,14 +266,20 @@ body {
 .cat-editor-panel {
   display: flex;
   min-height: 0;
+  width: 100%;
   padding: 0.75rem;
+  align-items: center;
+  justify-content: center;
 }
 
 .cat-editor-surface {
   position: relative;
-  width: 100%;
-  height: 100%;
-  min-height: 520px;
+  width: min(100%, calc(100vh - 220px));
+  max-width: 100%;
+  aspect-ratio: 1 / 1;
+  height: auto;
+  min-height: 0;
+  max-height: 100%;
   border-radius: 16px;
   overflow: hidden;
   background: radial-gradient(circle at center, rgba(17, 27, 41, 1) 0%, rgba(5, 12, 19, 1) 100%);
@@ -365,10 +376,11 @@ body {
   white-space: pre-wrap;
   line-height: 1.5;
   overflow: auto;
-  max-height: 220px;
+  max-height: min(28vh, 220px);
+  min-height: 140px;
 }
 
-@media (max-width: 960px) {
+@media (max-width: 820px) {
   body {
     overflow: auto;
   }
