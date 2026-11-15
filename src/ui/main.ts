@@ -123,7 +123,7 @@ function renderFrame(): void {
   const transform = getWorldTransform(state.sky, width, height);
   renderSky(ctx, state, transform, width, height, highlightConstellation);
   renderCard(ctx, state, width, height);
-  renderHud(ctx, state, width);
+  renderHud(ctx, state, width, height);
   renderOverlay(ctx, state, width, height);
 
   updateConstellationToggle();
