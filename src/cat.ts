@@ -1,127 +1,566 @@
-export function renderConstellationAuthoringTool(root: HTMLElement): void {
-  root.innerHTML = `
-    <div class="cat-tool" aria-label="Constellation authoring tool">
-      <header class="cat-header">
-        <div>
-          <p class="cat-kicker">Dev tool</p>
-          <h1>CAT — Constellation Authoring Tool</h1>
-        </div>
-        <div class="cat-header-actions">
-          <button type="button" class="cat-button secondary">Load</button>
-          <button type="button" class="cat-button primary">Save</button>
-        </div>
-      </header>
+type CatMode = 'new-star' | 'select' | 'edge' | 'delete';
 
-      <div class="cat-layout">
-        <aside class="cat-panel">
-          <div class="cat-panel-section">
-            <h2>Tools</h2>
-            <div class="cat-toolbar" aria-label="Constellation editing tools">
-              <button type="button" class="cat-tool-button active">New star</button>
-              <button type="button" class="cat-tool-button">Select</button>
-              <button type="button" class="cat-tool-button">Edge mode</button>
-              <button type="button" class="cat-tool-button">Delete</button>
-            </div>
-          </div>
+type CatStar = {
+  id: string;
+  x: number;
+  y: number;
+  size: number;
+};
 
-          <div class="cat-panel-section">
-            <h2>Constellation</h2>
-            <label class="cat-field">
-              <span>Name</span>
-              <input type="text" value="The Kite" />
-            </label>
-            <label class="cat-field">
-              <span>ID</span>
-              <input type="text" value="ai-kite" />
-            </label>
-            <label class="cat-field checkbox-field">
-              <input type="checkbox" checked />
-              <span>AI generated</span>
-            </label>
-          </div>
+type CatState = {
+  constellationName: string;
+  constellationId: string;
+  aiGenerated: boolean;
+  stars: CatStar[];
+  edges: Array<[string, string]>;
+  mode: CatMode;
+  selectedStarId: string | null;
+  pendingEdgeStart: string | null;
+};
 
-          <div class="cat-panel-section">
-            <h2>Stars</h2>
-            <ul class="cat-star-list">
-              <li class="selected"><span>k1</span><span>50, 10</span></li>
-              <li><span>k2</span><span>80, 40</span></li>
-              <li><span>k3</span><span>50, 70</span></li>
-              <li><span>k4</span><span>20, 40</span></li>
-              <li><span>k5</span><span>50, 95</span></li>
-            </ul>
-          </div>
-        </aside>
+const DEFAULT_STARS: CatStar[] = [
+  { id: 'k1', x: 50, y: 10, size: 3.0 },
+  { id: 'k2', x: 80, y: 40, size: 2.0 },
+  { id: 'k3', x: 50, y: 70, size: 2.5 },
+  { id: 'k4', x: 20, y: 40, size: 1.5 },
+  { id: 'k5', x: 50, y: 95, size: 1.0 },
+];
 
-        <main class="cat-editor-panel">
-          <div class="cat-editor-surface" aria-label="Constellation grid editor">
-            <div class="cat-grid" aria-hidden="true"></div>
-            <div class="cat-star" style="left: 50%; top: 10%; --star-size: 3.2;"></div>
-            <div class="cat-star" style="left: 80%; top: 40%; --star-size: 2.1;"></div>
-            <div class="cat-star selected" style="left: 50%; top: 70%; --star-size: 2.7;"></div>
-            <div class="cat-star" style="left: 20%; top: 40%; --star-size: 1.6;"></div>
-            <div class="cat-star" style="left: 50%; top: 95%; --star-size: 1.2;"></div>
-            <svg class="cat-edge-layer" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-              <path d="M 50 10 L 80 40 L 50 70 L 20 40 L 50 10" />
-              <path d="M 50 70 L 50 95" />
-            </svg>
-          </div>
-        </main>
+const DEFAULT_EDGES: Array<[string, string]> = [
+  ['k1', 'k2'],
+  ['k2', 'k3'],
+  ['k3', 'k4'],
+  ['k4', 'k1'],
+  ['k3', 'k5'],
+];
 
-        <aside class="cat-panel">
-          <div class="cat-panel-section">
-            <h2>Selected star</h2>
-            <div class="cat-field-row">
-              <label class="cat-field">
-                <span>X</span>
-                <input type="number" value="50" />
-              </label>
-              <label class="cat-field">
-                <span>Y</span>
-                <input type="number" value="70" />
-              </label>
-            </div>
-            <label class="cat-field">
-              <span>Size</span>
-              <input type="number" min="0.5" max="5" step="0.5" value="2.5" />
-            </label>
-            <label class="cat-field">
-              <span>ID</span>
-              <input type="text" value="k3" />
-            </label>
-          </div>
+const starterState: CatState = {
+  constellationName: 'The Kite',
+  constellationId: 'ai-kite',
+  aiGenerated: true,
+  stars: DEFAULT_STARS,
+  edges: DEFAULT_EDGES,
+  mode: 'new-star',
+  selectedStarId: 'k3',
+  pendingEdgeStart: null,
+};
 
-          <div class="cat-panel-section">
-            <h2>Validation</h2>
-            <div class="cat-status ok">Ready for authoring</div>
-            <ul class="cat-validation-list">
-              <li>5 stars</li>
-              <li>5 edges</li>
-              <li>All star ids unique</li>
-            </ul>
-          </div>
+function clampGridValue(value: number): number {
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
 
-          <div class="cat-panel-section">
-            <h2>JSON</h2>
-            <pre class="cat-preview">{
-  "id": "ai-kite",
-  "name": "The Kite",
-  "stars": [...],
-  "edges": [["k1", "k2"], ["k2", "k3"], ["k3", "k4"], ["k4", "k1"], ["k3", "k5"]]
-}</pre>
-          </div>
-        </aside>
-      </div>
-    </div>
-  `;
-
-  const grid = root.querySelector<HTMLDivElement>('.cat-grid');
-  if (grid) {
-    const cells = Array.from({ length: 100 }, (_, index) => {
-      const cell = document.createElement('span');
-      cell.className = 'cat-grid-cell';
-      cell.style.setProperty('--grid-index', String(index));
-      return cell;
-    });
-    grid.append(...cells);
+function createNewStarId(stars: CatStar[]): string {
+  let candidate = 1;
+  while (stars.some((star) => star.id === `k${candidate}`)) {
+    candidate += 1;
   }
+  return `k${candidate}`;
+}
+
+function pairKey(left: string, right: string): string {
+  return [left, right].sort().join('::');
+}
+
+function describeStarLocation(star: CatStar): string {
+  return `${star.x}, ${star.y}`;
+}
+
+function getValidationIssues(state: CatState): string[] {
+  const issues: string[] = [];
+
+  if (!state.constellationId.trim()) {
+    issues.push('Constellation id is required.');
+  }
+
+  if (!state.constellationName.trim()) {
+    issues.push('Constellation name is required.');
+  }
+
+  if (state.stars.length === 0) {
+    issues.push('At least one star is required.');
+  }
+
+  if (new Set(state.stars.map((star) => star.id)).size !== state.stars.length) {
+    issues.push('Star ids must be unique.');
+  }
+
+  for (const star of state.stars) {
+    if (!Number.isFinite(star.x) || !Number.isFinite(star.y) || !Number.isFinite(star.size)) {
+      issues.push(`Star ${star.id} has a non-finite position or size.`);
+      break;
+    }
+
+    if (star.x < 0 || star.x > 100 || star.y < 0 || star.y > 100) {
+      issues.push(`Star ${star.id} must stay within the 0–100 grid.`);
+      break;
+    }
+
+    if (star.size <= 0 || star.size > 5) {
+      issues.push(`Star ${star.id} size must stay between 0.5 and 5.`);
+      break;
+    }
+  }
+
+  for (const [from, to] of state.edges) {
+    if (from === to) {
+      issues.push('Self-edges are not allowed.');
+      break;
+    }
+
+    if (!state.stars.some((star) => star.id === from) || !state.stars.some((star) => star.id === to)) {
+      issues.push('Every edge must reference existing stars.');
+      break;
+    }
+
+    const pair = pairKey(from, to);
+    if (state.edges.filter(([left, right]) => pairKey(left, right) === pair).length > 1) {
+      issues.push('Duplicate edges are not allowed.');
+      break;
+    }
+  }
+
+  return issues;
+}
+
+function buildEdgePath(edge: [string, string], stars: CatStar[]): string {
+  const [fromId, toId] = edge;
+  const from = stars.find((star) => star.id === fromId);
+  const to = stars.find((star) => star.id === toId);
+  if (!from || !to) {
+    return '';
+  }
+
+  return `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
+}
+
+export function renderConstellationAuthoringTool(root: HTMLElement): void {
+  let state: CatState = structuredClone(starterState);
+
+  function render(): void {
+    const selectedStar = state.stars.find((star) => star.id === state.selectedStarId) ?? null;
+    const validationIssues = getValidationIssues(state);
+    const validationSummary = validationIssues.length === 0 ? 'Ready for authoring' : `${validationIssues.length} validation issue${validationIssues.length === 1 ? '' : 's'}`;
+    const validationStateClass = validationIssues.length === 0 ? 'ok' : 'warning';
+
+    root.innerHTML = `
+      <div class="cat-tool" aria-label="Constellation authoring tool">
+        <header class="cat-header">
+          <div>
+            <p class="cat-kicker">Dev tool</p>
+            <h1>CAT — Constellation Authoring Tool</h1>
+          </div>
+          <div class="cat-header-actions">
+            <button type="button" class="cat-button secondary" data-action="load">Load</button>
+            <button type="button" class="cat-button primary" data-action="save">Save</button>
+          </div>
+        </header>
+
+        <div class="cat-layout">
+          <aside class="cat-panel">
+            <div class="cat-panel-section">
+              <h2>Tools</h2>
+              <div class="cat-toolbar" aria-label="Constellation editing tools">
+                <button type="button" class="cat-tool-button ${state.mode === 'new-star' ? 'active' : ''}" data-mode="new-star">New star</button>
+                <button type="button" class="cat-tool-button ${state.mode === 'select' ? 'active' : ''}" data-mode="select">Select</button>
+                <button type="button" class="cat-tool-button ${state.mode === 'edge' ? 'active' : ''}" data-mode="edge">Edge mode</button>
+                <button type="button" class="cat-tool-button ${state.mode === 'delete' ? 'active' : ''}" data-mode="delete">Delete</button>
+              </div>
+            </div>
+
+            <div class="cat-panel-section">
+              <h2>Constellation</h2>
+              <label class="cat-field">
+                <span>Name</span>
+                <input type="text" value="${state.constellationName}" data-field="constellationName" />
+              </label>
+              <label class="cat-field">
+                <span>ID</span>
+                <input type="text" value="${state.constellationId}" data-field="constellationId" />
+              </label>
+              <label class="cat-field checkbox-field">
+                <input type="checkbox" ${state.aiGenerated ? 'checked' : ''} data-field="aiGenerated" />
+                <span>AI generated</span>
+              </label>
+            </div>
+
+            <div class="cat-panel-section">
+              <h2>Stars</h2>
+              <ul class="cat-star-list">
+                ${state.stars
+                  .map(
+                    (star) => `
+                      <li class="${state.selectedStarId === star.id ? 'selected' : ''}" data-star-id="${star.id}">
+                        <span>${star.id}</span>
+                        <span>${describeStarLocation(star)}</span>
+                      </li>
+                    `,
+                  )
+                  .join('')}
+              </ul>
+            </div>
+          </aside>
+
+          <main class="cat-editor-panel">
+            <div class="cat-editor-surface" aria-label="Constellation grid editor">
+              <div class="cat-grid" aria-hidden="true"></div>
+              ${state.stars
+                .map(
+                  (star) => `
+                    <button
+                      type="button"
+                      class="cat-star ${state.selectedStarId === star.id ? 'selected' : ''}"
+                      data-star-id="${star.id}"
+                      style="left: ${star.x}%; top: ${star.y}%; --star-size: ${Math.max(1.2, star.size)};"
+                      aria-label="Edit star ${star.id}"
+                    ></button>
+                  `,
+                )
+                .join('')}
+              <svg class="cat-edge-layer" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                ${state.edges.map((edge) => `<path d="${buildEdgePath(edge, state.stars)}"></path>`).join('')}
+              </svg>
+            </div>
+          </main>
+
+          <aside class="cat-panel">
+            <div class="cat-panel-section">
+              <h2>Selected star</h2>
+              ${selectedStar
+                ? `
+                  <div class="cat-field-row">
+                    <label class="cat-field">
+                      <span>X</span>
+                      <input type="number" min="0" max="100" value="${selectedStar.x}" data-selected-field="x" />
+                    </label>
+                    <label class="cat-field">
+                      <span>Y</span>
+                      <input type="number" min="0" max="100" value="${selectedStar.y}" data-selected-field="y" />
+                    </label>
+                  </div>
+                  <label class="cat-field">
+                    <span>Size</span>
+                    <input type="number" min="0.5" max="5" step="0.5" value="${selectedStar.size}" data-selected-field="size" />
+                  </label>
+                  <label class="cat-field">
+                    <span>ID</span>
+                    <input type="text" value="${selectedStar.id}" data-selected-field="id" />
+                  </label>
+                  <div class="cat-inline-actions">
+                    <button type="button" class="cat-button secondary" data-action="delete-selected-star">Delete star</button>
+                  </div>
+                `
+                : `
+                  <div class="cat-status">No star selected</div>
+                `}
+            </div>
+
+            <div class="cat-panel-section">
+              <h2>Validation</h2>
+              <div class="cat-status ${validationStateClass}">${validationSummary}</div>
+              <ul class="cat-validation-list">
+                ${validationIssues.length === 0
+                  ? `
+                    <li>${state.stars.length} stars</li>
+                    <li>${state.edges.length} edges</li>
+                    <li>All star ids unique</li>
+                  `
+                  : validationIssues.map((issue) => `<li>${issue}</li>`).join('')}
+              </ul>
+            </div>
+
+            <div class="cat-panel-section">
+              <h2>JSON</h2>
+              <pre class="cat-preview">${JSON.stringify(
+                {
+                  id: state.constellationId,
+                  name: state.constellationName,
+                  aiGenerated: state.aiGenerated,
+                  stars: state.stars,
+                  edges: state.edges,
+                },
+                null,
+                2,
+              )}</pre>
+            </div>
+          </aside>
+        </div>
+      </div>
+    `;
+
+    const toolButtons = root.querySelectorAll<HTMLButtonElement>('[data-mode]');
+    toolButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const nextMode = button.dataset.mode as CatMode;
+        state = { ...state, mode: nextMode };
+        if (nextMode !== 'edge') {
+          state.pendingEdgeStart = null;
+        }
+        render();
+      });
+    });
+
+    const fieldMap: Record<string, 'constellationName' | 'constellationId' | 'aiGenerated'> = {
+      constellationName: 'constellationName',
+      constellationId: 'constellationId',
+      aiGenerated: 'aiGenerated',
+    };
+
+    Object.entries(fieldMap).forEach(([selector, field]) => {
+      const input = root.querySelector<HTMLInputElement>(`[data-field="${selector}"]`);
+      if (!input) {
+        return;
+      }
+      input.addEventListener('input', () => {
+        const value = input.type === 'checkbox' ? input.checked : input.value;
+        // @ts-expect-error field is a runtime key on state already
+        state[field] = value;
+        render();
+      });
+    });
+
+    const selectedInputs = root.querySelectorAll<HTMLInputElement>('[data-selected-field]');
+    selectedInputs.forEach((input) => {
+      input.addEventListener('input', () => {
+        if (!state.selectedStarId) {
+          return;
+        }
+
+        const star = state.stars.find((candidate) => candidate.id === state.selectedStarId);
+        if (!star) {
+          return;
+        }
+
+        const field = input.dataset.selectedField;
+        if (!field) {
+          return;
+        }
+
+        if (field === 'id') {
+          const nextId = input.value.trim();
+          if (!nextId) {
+            return;
+          }
+          const originalId = star.id;
+          if (state.stars.some((candidate) => candidate.id === nextId && candidate.id !== originalId)) {
+            return;
+          }
+          star.id = nextId;
+          state.selectedStarId = nextId;
+          state.edges = state.edges.map(([from, to]) => {
+            if (from === originalId) return [nextId, to];
+            if (to === originalId) return [from, nextId];
+            return [from, to];
+          });
+          state.stars = state.stars.map((candidate) => (candidate.id === originalId ? { ...candidate, id: nextId } : candidate));
+          render();
+          return;
+        }
+
+        const numericValue = Number(input.value);
+        if (Number.isNaN(numericValue)) {
+          return;
+        }
+
+        if (field === 'x') {
+          star.x = clampGridValue(numericValue);
+        }
+        if (field === 'y') {
+          star.y = clampGridValue(numericValue);
+        }
+        if (field === 'size') {
+          star.size = Math.max(0.5, Math.min(5, numericValue));
+        }
+
+        render();
+      });
+    });
+
+    root.querySelectorAll<HTMLButtonElement>('[data-star-id]').forEach((starButton) => {
+      starButton.addEventListener('click', () => {
+        const clickedId = starButton.dataset.starId;
+        if (!clickedId) {
+          return;
+        }
+
+        if (state.mode === 'delete') {
+          state.stars = state.stars.filter((star) => star.id !== clickedId);
+          state.edges = state.edges.filter(([from, to]) => from !== clickedId && to !== clickedId);
+          if (state.selectedStarId === clickedId) {
+            state.selectedStarId = state.stars[0]?.id ?? null;
+          }
+          render();
+          return;
+        }
+
+        if (state.mode === 'edge') {
+          if (state.pendingEdgeStart === null) {
+            state.pendingEdgeStart = clickedId;
+            state.selectedStarId = clickedId;
+            render();
+            return;
+          }
+
+          if (state.pendingEdgeStart === clickedId) {
+            state.pendingEdgeStart = null;
+            state.selectedStarId = clickedId;
+            render();
+            return;
+          }
+
+          const candidate = [state.pendingEdgeStart, clickedId] as [string, string];
+          const key = pairKey(candidate[0], candidate[1]);
+          const exists = state.edges.some(([from, to]) => pairKey(from, to) === key);
+          if (!exists) {
+            state.edges = [...state.edges, candidate];
+          }
+          state.pendingEdgeStart = null;
+          state.selectedStarId = clickedId;
+          render();
+          return;
+        }
+
+        state.selectedStarId = clickedId;
+        render();
+      });
+    });
+
+    const surface = root.querySelector<HTMLDivElement>('.cat-editor-surface');
+    if (surface) {
+      surface.addEventListener('click', (event) => {
+        const target = event.target as HTMLElement;
+        if (target.closest('[data-star-id]')) {
+          return;
+        }
+
+        const rect = surface.getBoundingClientRect();
+        const x = ((event.clientX - rect.left) / Math.max(rect.width, 1)) * 100;
+        const y = ((event.clientY - rect.top) / Math.max(rect.height, 1)) * 100;
+        const nextX = clampGridValue(x);
+        const nextY = clampGridValue(y);
+
+        if (state.mode === 'new-star') {
+          const nextStar: CatStar = {
+            id: createNewStarId(state.stars),
+            x: nextX,
+            y: nextY,
+            size: 2.0,
+          };
+          state.stars = [...state.stars, nextStar];
+          state.selectedStarId = nextStar.id;
+          render();
+          return;
+        }
+
+        if (state.mode === 'select') {
+          const nearest = state.stars.reduce<CatStar | null>((closest, candidate) => {
+            if (!closest) {
+              return candidate;
+            }
+            const candidateDistance = Math.hypot(candidate.x - nextX, candidate.y - nextY);
+            const closestDistance = Math.hypot(closest.x - nextX, closest.y - nextY);
+            return candidateDistance < closestDistance ? candidate : closest;
+          }, null);
+          state.selectedStarId = nearest?.id ?? null;
+          render();
+        }
+      });
+    }
+
+    const actionButtons = root.querySelectorAll<HTMLButtonElement>('[data-action]');
+    actionButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const action = button.dataset.action;
+        if (action === 'delete-selected-star') {
+          if (!state.selectedStarId) {
+            return;
+          }
+
+          const selectedId = state.selectedStarId;
+          state.stars = state.stars.filter((star) => star.id !== selectedId);
+          state.edges = state.edges.filter(([from, to]) => from !== selectedId && to !== selectedId);
+          state.selectedStarId = state.stars[0]?.id ?? null;
+          render();
+          return;
+        }
+
+        if (action === 'save') {
+          const payload = {
+            id: state.constellationId,
+            name: state.constellationName,
+            aiGenerated: state.aiGenerated,
+            stars: state.stars,
+            edges: state.edges,
+          };
+          const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+          const objectUrl = URL.createObjectURL(blob);
+          const anchor = document.createElement('a');
+          anchor.href = objectUrl;
+          anchor.download = `${state.constellationId}.json`;
+          anchor.click();
+          URL.revokeObjectURL(objectUrl);
+          return;
+        }
+
+        if (action === 'load') {
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = '.json,application/json';
+          input.addEventListener('change', () => {
+            const file = input.files?.[0];
+            if (!file) {
+              return;
+            }
+            const reader = new FileReader();
+            reader.onload = () => {
+              try {
+                const parsed = JSON.parse(String(reader.result ?? '{}')) as {
+                  id?: string;
+                  name?: string;
+                  aiGenerated?: boolean;
+                  stars?: CatStar[];
+                  edges?: Array<[string, string]>;
+                };
+                const nextStars = Array.isArray(parsed.stars) ? parsed.stars : [];
+                const nextEdges = Array.isArray(parsed.edges) ? parsed.edges : [];
+                state = {
+                  constellationId: typeof parsed.id === 'string' ? parsed.id : state.constellationId,
+                  constellationName: typeof parsed.name === 'string' ? parsed.name : state.constellationName,
+                  aiGenerated: Boolean(parsed.aiGenerated),
+                  stars: nextStars,
+                  edges: nextEdges,
+                  mode: 'select',
+                  selectedStarId: nextStars[0]?.id ?? null,
+                  pendingEdgeStart: null,
+                };
+                render();
+              } catch {
+                window.alert('Unable to load constellation JSON.');
+              }
+            };
+            reader.readAsText(file);
+          });
+          input.click();
+        }
+      });
+    });
+
+    const grid = root.querySelector<HTMLDivElement>('.cat-grid');
+    if (grid) {
+      grid.innerHTML = '';
+      const cells = Array.from({ length: 100 }, () => {
+        const cell = document.createElement('span');
+        cell.className = 'cat-grid-cell';
+        cell.setAttribute('aria-hidden', 'true');
+        return cell;
+      });
+      grid.append(...cells);
+    }
+
+    const selectedStarIndexLabel = root.querySelector('.cat-status');
+    if (selectedStarIndexLabel && selectedStar) {
+      selectedStarIndexLabel.textContent = `Selected star: ${selectedStar.id}`;
+    }
+  }
+
+  render();
 }
