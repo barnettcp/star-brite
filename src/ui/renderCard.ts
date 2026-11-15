@@ -26,6 +26,33 @@ function roundedRect(
   ctx.closePath();
 }
 
+function wrapCardTitle(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
+  const normalized = text.trim() || 'PATTERN';
+  const words = normalized.toUpperCase().split(/\s+/);
+  const lines: string[] = [];
+  let current = '';
+
+  for (const word of words) {
+    const candidate = current ? `${current} ${word}` : word;
+    if (ctx.measureText(candidate).width > maxWidth && current) {
+      lines.push(current);
+      current = word;
+      continue;
+    }
+    current = candidate;
+  }
+
+  if (current) {
+    lines.push(current);
+  }
+
+  if (lines.length > 2) {
+    return [lines[0], `${lines[1].slice(0, 12)}…`];
+  }
+
+  return lines;
+}
+
 export function renderCard(
   ctx: CanvasRenderingContext2D,
   state: GameState,
@@ -50,25 +77,29 @@ export function renderCard(
   }
 
   const box = getCardBox(viewportWidth, viewportHeight);
-  const inset = 16;
-  const patternInset = 22;
-  const contentWidth = box.size - inset * 2;
+  const headerHeight = 42;
+  const footerHeight = 26;
+  const patternInset = 20;
+  const mainArea = box.size - headerHeight - footerHeight - 16;
+  const patternSize = Math.max(72, mainArea - patternInset * 2);
   const minX = Math.min(...candidate.stars.map((star) => star.x));
   const maxX = Math.max(...candidate.stars.map((star) => star.x));
   const minY = Math.min(...candidate.stars.map((star) => star.y));
   const maxY = Math.max(...candidate.stars.map((star) => star.y));
   const spanX = Math.max(maxX - minX, 1);
   const spanY = Math.max(maxY - minY, 1);
-  const patternSize = Math.min(contentWidth - patternInset * 2, box.size - 54);
   const xScale = patternSize / spanX;
   const yScale = patternSize / spanY;
   const fitScale = Math.min(xScale, yScale);
 
   ctx.save();
+  const gradient = ctx.createLinearGradient(box.x, box.y, box.x + box.size, box.y + box.size);
+  gradient.addColorStop(0, 'rgba(18, 28, 44, 0.96)');
+  gradient.addColorStop(1, 'rgba(9, 14, 25, 0.98)');
   ctx.shadowColor = 'rgba(110, 156, 255, 0.16)';
   ctx.shadowBlur = 18;
-  roundedRect(ctx, box.x, box.y, box.size, box.size + 8, 18);
-  ctx.fillStyle = theme.cardBackground;
+  roundedRect(ctx, box.x, box.y, box.size, box.size + 6, 18);
+  ctx.fillStyle = gradient;
   ctx.fill();
   ctx.shadowBlur = 0;
   ctx.strokeStyle = theme.cardBorder;
@@ -79,14 +110,23 @@ export function renderCard(
   roundedRect(ctx, box.x + 8, box.y + 8, box.size - 16, box.size - 16, 14);
   ctx.fill();
 
+  ctx.fillStyle = 'rgba(18, 31, 52, 0.8)';
+  roundedRect(ctx, box.x + 10, box.y + 10, box.size - 20, headerHeight - 8, 12);
+  ctx.fill();
+
   ctx.fillStyle = theme.cardTitle;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
-  ctx.font = `700 13px ${theme.fontFamily}`;
-  ctx.fillText((candidate.name || 'Pattern').toUpperCase(), box.x + 18, box.y + 18);
+  ctx.font = `700 12px ${theme.fontFamily}`;
+  const titleLines = wrapCardTitle(ctx, candidate.name || 'Pattern', box.size - 32);
+  const titleLineHeight = 12;
+  titleLines.forEach((line, index) => {
+    const y = box.y + 18 + index * (titleLineHeight + 1);
+    ctx.fillText(line, box.x + 18, y);
+  });
 
-  const patternX = box.x + inset + (contentWidth - patternSize) / 2;
-  const patternY = box.y + 38 + (contentWidth - patternSize) / 2;
+  const patternX = box.x + (box.size - patternSize) / 2;
+  const patternY = box.y + headerHeight + 10 + (mainArea - patternSize) / 2;
 
   for (const [firstId, secondId] of candidate.edges) {
     const firstStar = candidate.stars.find((star) => star.id === firstId);
@@ -119,9 +159,13 @@ export function renderCard(
     ctx.fill();
   }
 
+  ctx.fillStyle = 'rgba(13, 23, 38, 0.88)';
+  roundedRect(ctx, box.x + 8, box.y + box.size - footerHeight - 6, box.size - 16, footerHeight, 10);
+  ctx.fill();
+
   ctx.fillStyle = theme.hudMuted;
   ctx.font = `600 10px ${theme.fontFamily}`;
   ctx.textAlign = 'left';
-  ctx.fillText('reference pattern', box.x + 18, box.y + box.size - 16);
+  ctx.fillText('reference pattern', box.x + 18, box.y + box.size - 13);
   ctx.restore();
 }
