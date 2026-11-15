@@ -59,13 +59,20 @@ export function generateSkyModel(
           y: star.y - targetCentroid.y,
         };
 
-        return rotatePoint(scalePoint(relative, baseScale * placementScale), rotation);
+        const point = rotatePoint(scalePoint(relative, baseScale * placementScale), rotation);
+        const radius = star.size * mergedConfig.stars.radiusPerSizeUnits;
+
+        return {
+          x: point.x,
+          y: point.y,
+          radius,
+        };
       });
 
-      const minX = Math.min(...transformedStars.map((point, index) => point.x - (target.stars[index].size * mergedConfig.stars.radiusPerSizeUnits) - margin));
-      const maxX = Math.max(...transformedStars.map((point, index) => point.x + (target.stars[index].size * mergedConfig.stars.radiusPerSizeUnits) + margin));
-      const minY = Math.min(...transformedStars.map((point, index) => point.y - (target.stars[index].size * mergedConfig.stars.radiusPerSizeUnits) - margin));
-      const maxY = Math.max(...transformedStars.map((point, index) => point.y + (target.stars[index].size * mergedConfig.stars.radiusPerSizeUnits) + margin));
+      const minX = Math.min(...transformedStars.map((point) => point.x - point.radius - margin));
+      const maxX = Math.max(...transformedStars.map((point) => point.x + point.radius + margin));
+      const minY = Math.min(...transformedStars.map((point) => point.y - point.radius - margin));
+      const maxY = Math.max(...transformedStars.map((point) => point.y + point.radius + margin));
 
       const xRangeStart = margin - minX;
       const xRangeEnd = widthUnits - margin - maxX;
@@ -76,7 +83,7 @@ export function generateSkyModel(
         const centerX = xRangeStart + rng.place() * Math.max(0, xRangeEnd - xRangeStart);
         const centerY = yRangeStart + rng.place() * Math.max(0, yRangeEnd - yRangeStart);
 
-        memberStars = target.stars.map((star, index) => {
+        memberStars = target.stars.map((star) => {
           const relative = rotatePoint(scalePoint({
             x: star.x - targetCentroid.x,
             y: star.y - targetCentroid.y,

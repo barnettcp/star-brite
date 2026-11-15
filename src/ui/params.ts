@@ -13,6 +13,28 @@ export function parseQueryParams(search = window.location.search): Record<string
   return entries;
 }
 
+export function getDebugFlags(search = window.location.search): {
+  debugEnabled: boolean;
+  highlightConstellation: boolean;
+  logPlacement: boolean;
+} {
+  const params = parseQueryParams(search);
+  const debugValue = params.debug ?? '';
+  const hasExplicitDebugFlag = ['1', 'true', 'constellation', 'placement', 'logs'].includes(debugValue);
+  const isLocalhost = typeof window !== 'undefined' && (
+    window.location.hostname === 'localhost'
+    || window.location.hostname === '127.0.0.1'
+    || window.location.hostname === ''
+  );
+  const debugEnabled = isLocalhost || hasExplicitDebugFlag;
+
+  return {
+    debugEnabled,
+    highlightConstellation: hasExplicitDebugFlag && ['constellation', 'placement'].includes(debugValue),
+    logPlacement: isLocalhost || hasExplicitDebugFlag,
+  };
+}
+
 export function getRuntimeConfigOverrides(search = window.location.search): Partial<Config> {
   const params = parseQueryParams(search);
   const overrides: Partial<Config> = {};

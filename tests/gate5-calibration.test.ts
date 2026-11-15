@@ -16,7 +16,7 @@ const defaultViewportCells = [
   { viewport: [1280, 800], widthUnits: 200, density: 2 },
 ] as const;
 
-function computeMetricsForCell(viewport: [number, number], widthUnits: number, density: number, seeds = 200) {
+function computeMetricsForCell(viewport: readonly [number, number], widthUnits: number, density: number, seeds = 200) {
   const targetDecoyCount = Math.max(0, Math.round(density * (widthUnits * (viewport[1] / Math.max(viewport[0], 1))) / 1000));
   let successCount = 0;
   let fillTotal = 0;

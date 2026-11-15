@@ -9,11 +9,18 @@ export interface ScreenTransform {
 }
 
 export function getWorldTransform(sky: SkyModel, viewportWidth: number, viewportHeight: number): ScreenTransform {
-  const scale = Math.min(viewportWidth / sky.widthUnits, viewportHeight / sky.heightUnits);
+  const reservedTop = 84;
+  const reservedBottom = 24;
+  const reservedLeft = 20;
+  const reservedRight = Math.min(Math.max(viewportWidth * 0.24, 180), 260);
+  const usableWidth = Math.max(viewportWidth - reservedLeft - reservedRight, viewportWidth * 0.62);
+  const usableHeight = Math.max(viewportHeight - reservedTop - reservedBottom, viewportHeight * 0.68);
+  const scale = Math.min(usableWidth / sky.widthUnits, usableHeight / sky.heightUnits);
+
   return {
     scale,
-    offsetX: (viewportWidth - sky.widthUnits * scale) / 2,
-    offsetY: (viewportHeight - sky.heightUnits * scale) / 2,
+    offsetX: reservedLeft + (usableWidth - sky.widthUnits * scale) / 2,
+    offsetY: reservedTop + (usableHeight - sky.heightUnits * scale) / 2,
   };
 }
 
@@ -22,11 +29,13 @@ export function worldToScreen(x: number, y: number, transform: ScreenTransform):
 }
 
 export function getCardBox(viewportWidth: number, viewportHeight: number): { x: number; y: number; size: number } {
-  const side = Math.min(viewportWidth, viewportHeight) * 0.28;
-  const size = Math.min(Math.max(side, 120), 180);
+  const side = Math.min(viewportWidth, viewportHeight) * 0.24;
+  const size = Math.min(Math.max(side, 150), 210);
+  const topBarHeight = 76;
+  const gap = 24;
   return {
-    x: viewportWidth - size - 18,
-    y: 18,
+    x: Math.max(18, viewportWidth - size - 22),
+    y: topBarHeight + gap + 18,
     size,
   };
 }

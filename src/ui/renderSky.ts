@@ -13,6 +13,7 @@ export function renderSky(
   transform: ScreenTransform,
   viewportWidth: number,
   viewportHeight: number,
+  highlightConstellation = false,
 ): void {
   ctx.clearRect(0, 0, viewportWidth, viewportHeight);
   ctx.fillStyle = theme.background;
@@ -44,6 +45,7 @@ export function renderSky(
     const point = worldToScreen(star.x, star.y, transform);
     const radius = Math.max(config.stars.minDrawnRadiusPx, star.radius * transform.scale);
     const committed = state.committed[star.id];
+    const isTargetMember = star.kind === 'member' && highlightConstellation;
 
     ctx.beginPath();
     ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
@@ -52,10 +54,28 @@ export function renderSky(
       ctx.fillStyle = theme.starFound;
     } else if (committed === 'decoy') {
       ctx.fillStyle = theme.starRuledOut;
+    } else if (isTargetMember) {
+      ctx.fillStyle = theme.starDebug;
     } else {
       ctx.fillStyle = theme.starIdle;
     }
     ctx.fill();
+
+    if (isTargetMember && committed !== 'member') {
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, radius + 5, 0, Math.PI * 2);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = theme.starDebug;
+      ctx.stroke();
+    }
+
+    if (committed === 'member' && isTargetMember) {
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, radius + 5, 0, Math.PI * 2);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = theme.starDebug;
+      ctx.stroke();
+    }
 
     if (selectedId === star.id) {
       ctx.beginPath();
