@@ -341,21 +341,108 @@ export function renderConstellationAuthoringTool(root: HTMLElement): void {
       aiGenerated: 'aiGenerated',
     };
 
+    const syncJsonPreview = (): void => {
+      const preview = root.querySelector<HTMLPreElement>('.cat-preview');
+      if (!preview) {
+        return;
+      }
+      preview.textContent = JSON.stringify(
+        {
+          id: state.constellationId,
+          name: state.constellationName,
+          aiGenerated: state.aiGenerated,
+          stars: state.stars,
+          edges: state.edges,
+        },
+        null,
+        2,
+      );
+    };
+
     Object.entries(fieldMap).forEach(([selector, field]) => {
       const input = root.querySelector<HTMLInputElement>(`[data-field="${selector}"]`);
       if (!input) {
         return;
       }
+
+      const commitField = () => {
+        const value = input.type === 'checkbox' ? input.checked : input.value;
+        // @ts-expect-error field is a runtime key on state already
+        state[field] = value;
+        syncJsonPreview();
+        render();
+      };
+
       input.addEventListener('input', () => {
         const value = input.type === 'checkbox' ? input.checked : input.value;
         // @ts-expect-error field is a runtime key on state already
         state[field] = value;
-        render();
+        syncJsonPreview();
       });
+
+      input.addEventListener('change', commitField);
+      input.addEventListener('blur', commitField);
     });
 
     const selectedInputs = root.querySelectorAll<HTMLInputElement>('[data-selected-field]');
     selectedInputs.forEach((input) => {
+      const commitSelectedInput = () => {
+        if (!state.selectedStarId) {
+          return;
+        }
+
+        const star = state.stars.find((candidate) => candidate.id === state.selectedStarId);
+        if (!star) {
+          return;
+        }
+
+        const field = input.dataset.selectedField;
+        if (!field) {
+          return;
+        }
+
+        if (field === 'id') {
+          const nextId = input.value.trim();
+          if (!nextId) {
+            return;
+          }
+          const originalId = star.id;
+          if (state.stars.some((candidate) => candidate.id === nextId && candidate.id !== originalId)) {
+            render();
+            return;
+          }
+          star.id = nextId;
+          state.selectedStarId = nextId;
+          state.edges = state.edges.map(([from, to]) => {
+            if (from === originalId) return [nextId, to];
+            if (to === originalId) return [from, nextId];
+            return [from, to];
+          });
+          state.stars = state.stars.map((candidate) => (candidate.id === originalId ? { ...candidate, id: nextId } : candidate));
+          syncJsonPreview();
+          render();
+          return;
+        }
+
+        const numericValue = Number(input.value);
+        if (Number.isNaN(numericValue)) {
+          return;
+        }
+
+        if (field === 'x') {
+          star.x = clampGridValue(numericValue);
+        }
+        if (field === 'y') {
+          star.y = clampGridValue(numericValue);
+        }
+        if (field === 'size') {
+          star.size = Math.max(0.5, Math.min(5, numericValue));
+        }
+
+        syncJsonPreview();
+        render();
+      };
+
       input.addEventListener('input', () => {
         if (!state.selectedStarId) {
           return;
@@ -388,7 +475,7 @@ export function renderConstellationAuthoringTool(root: HTMLElement): void {
             return [from, to];
           });
           state.stars = state.stars.map((candidate) => (candidate.id === originalId ? { ...candidate, id: nextId } : candidate));
-          render();
+          syncJsonPreview();
           return;
         }
 
@@ -407,8 +494,11 @@ export function renderConstellationAuthoringTool(root: HTMLElement): void {
           star.size = Math.max(0.5, Math.min(5, numericValue));
         }
 
-        render();
+        syncJsonPreview();
       });
+
+      input.addEventListener('change', commitSelectedInput);
+      input.addEventListener('blur', commitSelectedInput);
     });
 
     root.querySelectorAll<HTMLButtonElement>('[data-star-id]').forEach((starButton) => {
