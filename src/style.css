@@ -258,6 +258,12 @@ body {
   color: var(--cat-text);
 }
 
+.cat-star-list li.placeholder {
+  justify-content: center;
+  color: var(--cat-muted);
+  background: rgba(12, 20, 31, 0.46);
+}
+
 .cat-star-list li.selected {
   border-color: rgba(138, 212, 255, 0.8);
   background: rgba(138, 212, 255, 0.1);

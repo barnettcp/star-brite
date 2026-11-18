@@ -1,4 +1,4 @@
-type CatMode = 'new-star' | 'select' | 'edge' | 'delete';
+type CatMode = 'star' | 'edge' | 'delete';
 
 type CatStar = {
   id: string;
@@ -18,32 +18,20 @@ type CatState = {
   pendingEdgeStart: string | null;
 };
 
-const DEFAULT_STARS: CatStar[] = [
-  { id: 'k1', x: 50, y: 10, size: 3.0 },
-  { id: 'k2', x: 80, y: 40, size: 2.0 },
-  { id: 'k3', x: 50, y: 70, size: 2.5 },
-  { id: 'k4', x: 20, y: 40, size: 1.5 },
-  { id: 'k5', x: 50, y: 95, size: 1.0 },
-];
+function createBlankState(): CatState {
+  return {
+    constellationName: 'Untitled constellation',
+    constellationId: 'untitled-constellation',
+    aiGenerated: false,
+    stars: [],
+    edges: [],
+    mode: 'star',
+    selectedStarId: null,
+    pendingEdgeStart: null,
+  };
+}
 
-const DEFAULT_EDGES: Array<[string, string]> = [
-  ['k1', 'k2'],
-  ['k2', 'k3'],
-  ['k3', 'k4'],
-  ['k4', 'k1'],
-  ['k3', 'k5'],
-];
-
-const starterState: CatState = {
-  constellationName: 'The Kite',
-  constellationId: 'ai-kite',
-  aiGenerated: true,
-  stars: DEFAULT_STARS,
-  edges: DEFAULT_EDGES,
-  mode: 'new-star',
-  selectedStarId: 'k3',
-  pendingEdgeStart: null,
-};
+const starterState: CatState = createBlankState();
 
 function clampGridValue(value: number): number {
   return Math.max(0, Math.min(100, Math.round(value)));
@@ -142,6 +130,30 @@ export function renderConstellationAuthoringTool(root: HTMLElement): void {
     const validationSummary = validationIssues.length === 0 ? 'Ready for authoring' : `${validationIssues.length} validation issue${validationIssues.length === 1 ? '' : 's'}`;
     const validationStateClass = validationIssues.length === 0 ? 'ok' : 'warning';
 
+    const listTitle = state.mode === 'edge' ? 'Edges' : 'Stars';
+    const listItems = state.mode === 'edge'
+      ? state.edges.length === 0
+        ? '<li class="placeholder">No edges yet.</li>'
+        : state.edges
+            .map(([from, to], index) => `
+              <li class="${state.pendingEdgeStart === from || state.pendingEdgeStart === to ? 'selected' : ''}" data-edge-index="${index}">
+                <span>${from} → ${to}</span>
+              </li>
+            `)
+            .join('')
+      : state.stars.length === 0
+        ? '<li class="placeholder">No stars yet.</li>'
+        : state.stars
+            .map(
+              (star) => `
+                <li class="${state.selectedStarId === star.id ? 'selected' : ''}" data-star-id="${star.id}">
+                  <span>${star.id}</span>
+                  <span>${describeStarLocation(star)}</span>
+                </li>
+              `,
+            )
+            .join('');
+
     root.innerHTML = `
       <div class="cat-tool" aria-label="Constellation authoring tool">
         <header class="cat-header">
@@ -150,6 +162,7 @@ export function renderConstellationAuthoringTool(root: HTMLElement): void {
             <h1>CAT — Constellation Authoring Tool</h1>
           </div>
           <div class="cat-header-actions">
+            <button type="button" class="cat-button secondary" data-action="new">New</button>
             <button type="button" class="cat-button secondary" data-action="load">Load</button>
             <button type="button" class="cat-button primary" data-action="save">Save</button>
           </div>
@@ -160,9 +173,8 @@ export function renderConstellationAuthoringTool(root: HTMLElement): void {
             <div class="cat-panel-section">
               <h2>Tools</h2>
               <div class="cat-toolbar" aria-label="Constellation editing tools">
-                <button type="button" class="cat-tool-button ${state.mode === 'new-star' ? 'active' : ''}" data-mode="new-star">New star</button>
-                <button type="button" class="cat-tool-button ${state.mode === 'select' ? 'active' : ''}" data-mode="select">Select</button>
-                <button type="button" class="cat-tool-button ${state.mode === 'edge' ? 'active' : ''}" data-mode="edge">Edge mode</button>
+                <button type="button" class="cat-tool-button ${state.mode === 'star' ? 'active' : ''}" data-mode="star">Star</button>
+                <button type="button" class="cat-tool-button ${state.mode === 'edge' ? 'active' : ''}" data-mode="edge">Edge</button>
                 <button type="button" class="cat-tool-button ${state.mode === 'delete' ? 'active' : ''}" data-mode="delete">Delete</button>
               </div>
             </div>
@@ -184,18 +196,9 @@ export function renderConstellationAuthoringTool(root: HTMLElement): void {
             </div>
 
             <div class="cat-panel-section">
-              <h2>Stars</h2>
+              <h2>${listTitle}</h2>
               <ul class="cat-star-list">
-                ${state.stars
-                  .map(
-                    (star) => `
-                      <li class="${state.selectedStarId === star.id ? 'selected' : ''}" data-star-id="${star.id}">
-                        <span>${star.id}</span>
-                        <span>${describeStarLocation(star)}</span>
-                      </li>
-                    `,
-                  )
-                  .join('')}
+                ${listItems}
               </ul>
             </div>
           </aside>
@@ -432,37 +435,25 @@ export function renderConstellationAuthoringTool(root: HTMLElement): void {
           return;
         }
 
+        if (state.mode !== 'star') {
+          return;
+        }
+
         const rect = surface.getBoundingClientRect();
         const x = ((event.clientX - rect.left) / Math.max(rect.width, 1)) * 100;
         const y = ((event.clientY - rect.top) / Math.max(rect.height, 1)) * 100;
         const nextX = clampGridValue(x);
         const nextY = clampGridValue(y);
 
-        if (state.mode === 'new-star') {
-          const nextStar: CatStar = {
-            id: createNewStarId(state.stars),
-            x: nextX,
-            y: nextY,
-            size: 2.0,
-          };
-          state.stars = [...state.stars, nextStar];
-          state.selectedStarId = nextStar.id;
-          render();
-          return;
-        }
-
-        if (state.mode === 'select') {
-          const nearest = state.stars.reduce<CatStar | null>((closest, candidate) => {
-            if (!closest) {
-              return candidate;
-            }
-            const candidateDistance = Math.hypot(candidate.x - nextX, candidate.y - nextY);
-            const closestDistance = Math.hypot(closest.x - nextX, closest.y - nextY);
-            return candidateDistance < closestDistance ? candidate : closest;
-          }, null);
-          state.selectedStarId = nearest?.id ?? null;
-          render();
-        }
+        const nextStar: CatStar = {
+          id: createNewStarId(state.stars),
+          x: nextX,
+          y: nextY,
+          size: 2.0,
+        };
+        state.stars = [...state.stars, nextStar];
+        state.selectedStarId = nextStar.id;
+        render();
       });
     }
 
@@ -470,6 +461,12 @@ export function renderConstellationAuthoringTool(root: HTMLElement): void {
     actionButtons.forEach((button) => {
       button.addEventListener('click', () => {
         const action = button.dataset.action;
+        if (action === 'new') {
+          state = createBlankState();
+          render();
+          return;
+        }
+
         if (action === 'delete-selected-star') {
           if (!state.selectedStarId) {
             return;
@@ -528,7 +525,7 @@ export function renderConstellationAuthoringTool(root: HTMLElement): void {
                   aiGenerated: Boolean(parsed.aiGenerated),
                   stars: nextStars,
                   edges: nextEdges,
-                  mode: 'select',
+                  mode: 'star',
                   selectedStarId: nextStars[0]?.id ?? null,
                   pendingEdgeStart: null,
                 };
