@@ -120,7 +120,18 @@ function buildEdgePath(edge: [string, string], stars: CatStar[]): string {
     return '';
   }
 
-  return `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
+  const startMargin = 2.0;
+  const endMargin = 2.0;
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const distance = Math.hypot(dx, dy) || 1;
+  const nx = dx / distance;
+  const ny = dy / distance;
+
+  const shortenedFrom = { x: from.x + nx * startMargin, y: from.y + ny * startMargin };
+  const shortenedTo = { x: to.x - nx * endMargin, y: to.y - ny * endMargin };
+
+  return `M ${shortenedFrom.x} ${shortenedFrom.y} L ${shortenedTo.x} ${shortenedTo.y}`;
 }
 
 export function renderConstellationAuthoringTool(root: HTMLElement): void {
@@ -223,7 +234,12 @@ export function renderConstellationAuthoringTool(root: HTMLElement): void {
                 )
                 .join('')}
               <svg class="cat-edge-layer" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                ${state.edges.map((edge) => `<path d="${buildEdgePath(edge, state.stars)}"></path>`).join('')}
+                ${state.edges
+                  .map((edge) => {
+                    const key = pairKey(edge[0], edge[1]);
+                    return `<path d="${buildEdgePath(edge, state.stars)}" data-edge-key="${key}" class="${state.selectedEdgeKey === key ? 'selected' : ''}"></path>`;
+                  })
+                  .join('')}
               </svg>
             </div>
           </main>
@@ -454,6 +470,31 @@ export function renderConstellationAuthoringTool(root: HTMLElement): void {
         if (!edgeKey) {
           return;
         }
+
+        if (state.mode === 'delete') {
+          state.edges = state.edges.filter(([from, to]) => pairKey(from, to) !== edgeKey);
+          if (state.selectedEdgeKey === edgeKey) {
+            state.selectedEdgeKey = null;
+          }
+          render();
+          return;
+        }
+
+        state.selectedEdgeKey = edgeKey;
+        state.selectedStarId = null;
+        state.pendingEdgeStart = null;
+        render();
+      });
+    });
+
+    root.querySelectorAll<SVGPathElement>('.cat-edge-layer path[data-edge-key]').forEach((edgePath) => {
+      edgePath.addEventListener('click', (event) => {
+        const edgeKey = edgePath.dataset.edgeKey;
+        if (!edgeKey) {
+          return;
+        }
+
+        event.stopPropagation();
 
         if (state.mode === 'delete') {
           state.edges = state.edges.filter(([from, to]) => pairKey(from, to) !== edgeKey);
