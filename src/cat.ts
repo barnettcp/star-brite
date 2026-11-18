@@ -15,6 +15,7 @@ type CatState = {
   edges: Array<[string, string]>;
   mode: CatMode;
   selectedStarId: string | null;
+  selectedEdgeKey: string | null;
   pendingEdgeStart: string | null;
 };
 
@@ -27,6 +28,7 @@ function createBlankState(): CatState {
     edges: [],
     mode: 'star',
     selectedStarId: null,
+    selectedEdgeKey: null,
     pendingEdgeStart: null,
   };
 }
@@ -126,6 +128,7 @@ export function renderConstellationAuthoringTool(root: HTMLElement): void {
 
   function render(): void {
     const selectedStar = state.stars.find((star) => star.id === state.selectedStarId) ?? null;
+    const selectedEdge = state.selectedEdgeKey ? state.edges.find(([from, to]) => pairKey(from, to) === state.selectedEdgeKey) ?? null : null;
     const validationIssues = getValidationIssues(state);
     const validationSummary = validationIssues.length === 0 ? 'Ready for authoring' : `${validationIssues.length} validation issue${validationIssues.length === 1 ? '' : 's'}`;
     const validationStateClass = validationIssues.length === 0 ? 'ok' : 'warning';
@@ -135,8 +138,8 @@ export function renderConstellationAuthoringTool(root: HTMLElement): void {
       ? state.edges.length === 0
         ? '<li class="placeholder">No edges yet.</li>'
         : state.edges
-            .map(([from, to], index) => `
-              <li class="${state.pendingEdgeStart === from || state.pendingEdgeStart === to ? 'selected' : ''}" data-edge-index="${index}">
+            .map(([from, to]) => `
+              <li class="${state.selectedEdgeKey === pairKey(from, to) ? 'selected' : ''}" data-edge-key="${pairKey(from, to)}">
                 <span>${from} → ${to}</span>
               </li>
             `)
@@ -227,34 +230,45 @@ export function renderConstellationAuthoringTool(root: HTMLElement): void {
 
           <aside class="cat-panel">
             <div class="cat-panel-section">
-              <h2>Selected star</h2>
-              ${selectedStar
+              <h2>${selectedEdge ? 'Selected edge' : selectedStar ? 'Selected star' : 'Selection'}</h2>
+              ${selectedEdge
                 ? `
-                  <div class="cat-field-row">
-                    <label class="cat-field">
-                      <span>X</span>
-                      <input type="number" min="0" max="100" value="${selectedStar.x}" data-selected-field="x" />
-                    </label>
-                    <label class="cat-field">
-                      <span>Y</span>
-                      <input type="number" min="0" max="100" value="${selectedStar.y}" data-selected-field="y" />
-                    </label>
+                  <div class="cat-selection-summary">
+                    <span>${selectedEdge[0]}</span>
+                    <span class="selection-arrow">→</span>
+                    <span>${selectedEdge[1]}</span>
                   </div>
-                  <label class="cat-field">
-                    <span>Size</span>
-                    <input type="number" min="0.5" max="5" step="0.5" value="${selectedStar.size}" data-selected-field="size" />
-                  </label>
-                  <label class="cat-field">
-                    <span>ID</span>
-                    <input type="text" value="${selectedStar.id}" data-selected-field="id" />
-                  </label>
                   <div class="cat-inline-actions">
-                    <button type="button" class="cat-button secondary" data-action="delete-selected-star">Delete star</button>
+                    <button type="button" class="cat-button secondary" data-action="delete-selected-edge">Delete edge</button>
                   </div>
                 `
-                : `
-                  <div class="cat-status">No star selected</div>
-                `}
+                : selectedStar
+                  ? `
+                    <div class="cat-field-row">
+                      <label class="cat-field">
+                        <span>X</span>
+                        <input type="number" min="0" max="100" value="${selectedStar.x}" data-selected-field="x" />
+                      </label>
+                      <label class="cat-field">
+                        <span>Y</span>
+                        <input type="number" min="0" max="100" value="${selectedStar.y}" data-selected-field="y" />
+                      </label>
+                    </div>
+                    <label class="cat-field">
+                      <span>Size</span>
+                      <input type="number" min="0.5" max="5" step="0.5" value="${selectedStar.size}" data-selected-field="size" />
+                    </label>
+                    <label class="cat-field">
+                      <span>ID</span>
+                      <input type="text" value="${selectedStar.id}" data-selected-field="id" />
+                    </label>
+                    <div class="cat-inline-actions">
+                      <button type="button" class="cat-button secondary" data-action="delete-selected-star">Delete star</button>
+                    </div>
+                  `
+                  : `
+                    <div class="cat-status">No selection</div>
+                  `}
             </div>
 
             <div class="cat-panel-section">
@@ -294,8 +308,11 @@ export function renderConstellationAuthoringTool(root: HTMLElement): void {
     toolButtons.forEach((button) => {
       button.addEventListener('click', () => {
         const nextMode = button.dataset.mode as CatMode;
-        state = { ...state, mode: nextMode };
-        if (nextMode !== 'edge') {
+        state = { ...state, mode: nextMode, pendingEdgeStart: nextMode === 'edge' ? state.pendingEdgeStart : null };
+        if (nextMode === 'edge') {
+          state.selectedEdgeKey = null;
+        } else {
+          state.selectedEdgeKey = null;
           state.pendingEdgeStart = null;
         }
         render();
@@ -391,11 +408,13 @@ export function renderConstellationAuthoringTool(root: HTMLElement): void {
           if (state.selectedStarId === clickedId) {
             state.selectedStarId = state.stars[0]?.id ?? null;
           }
+          state.selectedEdgeKey = null;
           render();
           return;
         }
 
         if (state.mode === 'edge') {
+          state.selectedEdgeKey = null;
           if (state.pendingEdgeStart === null) {
             state.pendingEdgeStart = clickedId;
             state.selectedStarId = clickedId;
@@ -417,12 +436,37 @@ export function renderConstellationAuthoringTool(root: HTMLElement): void {
             state.edges = [...state.edges, candidate];
           }
           state.pendingEdgeStart = null;
+          state.selectedEdgeKey = key;
           state.selectedStarId = clickedId;
           render();
           return;
         }
 
+        state.selectedEdgeKey = null;
         state.selectedStarId = clickedId;
+        render();
+      });
+    });
+
+    root.querySelectorAll<HTMLLIElement>('[data-edge-key]').forEach((edgeItem) => {
+      edgeItem.addEventListener('click', () => {
+        const edgeKey = edgeItem.dataset.edgeKey;
+        if (!edgeKey) {
+          return;
+        }
+
+        if (state.mode === 'delete') {
+          state.edges = state.edges.filter(([from, to]) => pairKey(from, to) !== edgeKey);
+          if (state.selectedEdgeKey === edgeKey) {
+            state.selectedEdgeKey = null;
+          }
+          render();
+          return;
+        }
+
+        state.selectedEdgeKey = edgeKey;
+        state.selectedStarId = null;
+        state.pendingEdgeStart = null;
         render();
       });
     });
@@ -467,6 +511,17 @@ export function renderConstellationAuthoringTool(root: HTMLElement): void {
           return;
         }
 
+        if (action === 'delete-selected-edge') {
+          if (!state.selectedEdgeKey) {
+            return;
+          }
+
+          state.edges = state.edges.filter(([from, to]) => pairKey(from, to) !== state.selectedEdgeKey);
+          state.selectedEdgeKey = null;
+          render();
+          return;
+        }
+
         if (action === 'delete-selected-star') {
           if (!state.selectedStarId) {
             return;
@@ -476,6 +531,7 @@ export function renderConstellationAuthoringTool(root: HTMLElement): void {
           state.stars = state.stars.filter((star) => star.id !== selectedId);
           state.edges = state.edges.filter(([from, to]) => from !== selectedId && to !== selectedId);
           state.selectedStarId = state.stars[0]?.id ?? null;
+          state.selectedEdgeKey = null;
           render();
           return;
         }
@@ -527,6 +583,7 @@ export function renderConstellationAuthoringTool(root: HTMLElement): void {
                   edges: nextEdges,
                   mode: 'star',
                   selectedStarId: nextStars[0]?.id ?? null,
+                  selectedEdgeKey: null,
                   pendingEdgeStart: null,
                 };
                 render();

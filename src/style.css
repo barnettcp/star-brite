@@ -50,7 +50,8 @@ body {
 }
 
 #starbrite-new-sky,
-#starbrite-toggle-constellation {
+#starbrite-toggle-constellation,
+#starbrite-open-cat {
   position: absolute;
   z-index: 3;
   padding: 0.7rem 1.1rem;
@@ -74,6 +75,11 @@ body {
 #starbrite-toggle-constellation {
   right: 20px;
   bottom: 76px;
+}
+
+#starbrite-open-cat {
+  right: 20px;
+  bottom: 132px;
 }
 
 .cat-tool {
@@ -267,6 +273,23 @@ body {
 .cat-star-list li.selected {
   border-color: rgba(138, 212, 255, 0.8);
   background: rgba(138, 212, 255, 0.1);
+}
+
+.cat-selection-summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.7rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid var(--cat-panel-border);
+  background: rgba(12, 20, 31, 0.82);
+  color: var(--cat-text);
+  font-weight: 600;
+}
+
+.selection-arrow {
+  color: var(--cat-muted);
 }
 
 .cat-editor-panel {

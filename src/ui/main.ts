@@ -42,6 +42,13 @@ if (params.get('tool') === 'cat') {
   constellationToggle.setAttribute('aria-pressed', 'false');
   app.appendChild(constellationToggle);
 
+  const catToolButton = document.createElement('button');
+  catToolButton.type = 'button';
+  catToolButton.id = 'starbrite-open-cat';
+  catToolButton.textContent = 'Open CAT';
+  catToolButton.hidden = true;
+  app.appendChild(catToolButton);
+
   const context = canvas.getContext('2d');
   if (context === null) {
     throw new Error('Canvas 2D context is unavailable.');
@@ -89,6 +96,12 @@ if (params.get('tool') === 'cat') {
     constellationToggle.setAttribute('aria-pressed', String(highlightConstellation));
   }
 
+  function updateDevButtons(): void {
+    catToolButton.hidden = !debugFlags.debugEnabled;
+    newSkyButton.hidden = state === null || state.status !== 'won';
+    constellationToggle.hidden = !debugFlags.debugEnabled;
+  }
+
   function logConstellationPlacement(currentState: GameState): void {
     const members = currentState.sky.stars.filter((star) => star.kind === 'member');
     if (members.length === 0) {
@@ -120,8 +133,7 @@ if (params.get('tool') === 'cat') {
 
     if (loadingError !== null || state === null) {
       renderLoadingMessage(loadingError ?? 'Loading constellations...');
-      newSkyButton.hidden = true;
-      constellationToggle.hidden = !debugFlags.debugEnabled;
+      updateDevButtons();
       return;
     }
 
@@ -134,8 +146,7 @@ if (params.get('tool') === 'cat') {
     renderOverlay(ctx, currentState, width, height);
 
     updateConstellationToggle();
-    newSkyButton.hidden = currentState.status !== 'won';
-    constellationToggle.hidden = !debugFlags.debugEnabled;
+    updateDevButtons();
   }
 
   function newGame(seed = getSeedFromSearch()) {
@@ -199,6 +210,11 @@ if (params.get('tool') === 'cat') {
   });
 
   newSkyButton.addEventListener('click', () => newGame(getSeedFromSearch()));
+  catToolButton.addEventListener('click', () => {
+    const search = new URLSearchParams(window.location.search);
+    search.set('tool', 'cat');
+    window.location.search = search.toString();
+  });
   constellationToggle.addEventListener('click', () => {
     highlightConstellation = !highlightConstellation;
     updateConstellationToggle();
