@@ -57,6 +57,10 @@ function describeStarLocation(star: CatStar): string {
   return `${star.x}, ${star.y}`;
 }
 
+function getEditorStarDisplaySize(size: number): number {
+  return Math.max(8, 2.5 + size * 8);
+}
+
 function getValidationIssues(state: CatState): string[] {
   try {
     validateConstellation({
@@ -192,7 +196,7 @@ export function renderConstellationAuthoringTool(root: HTMLElement): void {
                       type="button"
                       class="cat-star ${state.selectedStarId === star.id ? 'selected' : ''}"
                       data-star-id="${star.id}"
-                      style="left: ${star.x}%; top: ${star.y}%; --star-size: ${Math.max(1.2, star.size)};"
+                      style="left: ${star.x}%; top: ${star.y}%; --display-star-size: ${getEditorStarDisplaySize(star.size)}px;"
                       aria-label="Edit star ${star.id}"
                     ></button>
                   `,

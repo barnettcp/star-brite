@@ -340,8 +340,17 @@ body {
 .cat-star {
   position: absolute;
   z-index: 2;
-  width: calc(var(--star-size, 2.2) * 9px);
-  height: calc(var(--star-size, 2.2) * 9px);
+  appearance: none;
+  -webkit-appearance: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  display: block;
+  width: var(--display-star-size, 12px);
+  height: var(--display-star-size, 12px);
+  min-width: 8px;
+  min-height: 8px;
+  aspect-ratio: 1;
   transform: translate(-50%, -50%);
   left: 50%;
   top: 50%;
