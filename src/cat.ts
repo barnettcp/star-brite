@@ -1,3 +1,5 @@
+import { validateConstellation } from './core/constellation';
+
 type CatMode = 'star' | 'edge' | 'delete';
 
 type CatStar = {
@@ -56,60 +58,21 @@ function describeStarLocation(star: CatStar): string {
 }
 
 function getValidationIssues(state: CatState): string[] {
-  const issues: string[] = [];
-
-  if (!state.constellationId.trim()) {
-    issues.push('Constellation id is required.');
-  }
-
-  if (!state.constellationName.trim()) {
-    issues.push('Constellation name is required.');
-  }
-
-  if (state.stars.length === 0) {
-    issues.push('At least one star is required.');
-  }
-
-  if (new Set(state.stars.map((star) => star.id)).size !== state.stars.length) {
-    issues.push('Star ids must be unique.');
-  }
-
-  for (const star of state.stars) {
-    if (!Number.isFinite(star.x) || !Number.isFinite(star.y) || !Number.isFinite(star.size)) {
-      issues.push(`Star ${star.id} has a non-finite position or size.`);
-      break;
+  try {
+    validateConstellation({
+      id: state.constellationId,
+      name: state.constellationName,
+      aiGenerated: state.aiGenerated,
+      stars: state.stars,
+      edges: state.edges,
+    });
+    return [];
+  } catch (error) {
+    if (error instanceof Error) {
+      return [error.message];
     }
-
-    if (star.x < 0 || star.x > 100 || star.y < 0 || star.y > 100) {
-      issues.push(`Star ${star.id} must stay within the 0–100 grid.`);
-      break;
-    }
-
-    if (star.size <= 0 || star.size > 5) {
-      issues.push(`Star ${star.id} size must stay between 0.5 and 5.`);
-      break;
-    }
+    return ['Constellation is invalid.'];
   }
-
-  for (const [from, to] of state.edges) {
-    if (from === to) {
-      issues.push('Self-edges are not allowed.');
-      break;
-    }
-
-    if (!state.stars.some((star) => star.id === from) || !state.stars.some((star) => star.id === to)) {
-      issues.push('Every edge must reference existing stars.');
-      break;
-    }
-
-    const pair = pairKey(from, to);
-    if (state.edges.filter(([left, right]) => pairKey(left, right) === pair).length > 1) {
-      issues.push('Duplicate edges are not allowed.');
-      break;
-    }
-  }
-
-  return issues;
 }
 
 function buildEdgePath(edge: [string, string], stars: CatStar[]): string {
@@ -141,8 +104,10 @@ export function renderConstellationAuthoringTool(root: HTMLElement): void {
     const selectedStar = state.stars.find((star) => star.id === state.selectedStarId) ?? null;
     const selectedEdge = state.selectedEdgeKey ? state.edges.find(([from, to]) => pairKey(from, to) === state.selectedEdgeKey) ?? null : null;
     const validationIssues = getValidationIssues(state);
-    const validationSummary = validationIssues.length === 0 ? 'Ready for authoring' : `${validationIssues.length} validation issue${validationIssues.length === 1 ? '' : 's'}`;
-    const validationStateClass = validationIssues.length === 0 ? 'ok' : 'warning';
+    const isValid = validationIssues.length === 0;
+    const validationSummary = isValid ? 'Valid constellation' : `${validationIssues.length} validation issue${validationIssues.length === 1 ? '' : 's'}`;
+    const validationStateClass = isValid ? 'ok' : 'warning';
+    const canExport = isValid;
 
     const listTitle = state.mode === 'edge' ? 'Edges' : 'Stars';
     const listItems = state.mode === 'edge'
@@ -178,7 +143,7 @@ export function renderConstellationAuthoringTool(root: HTMLElement): void {
           <div class="cat-header-actions">
             <button type="button" class="cat-button secondary" data-action="new">New</button>
             <button type="button" class="cat-button secondary" data-action="load">Load</button>
-            <button type="button" class="cat-button primary" data-action="save">Save</button>
+            <button type="button" class="cat-button primary" data-action="save" ${canExport ? '' : 'disabled'}>Save</button>
           </div>
         </header>
 
@@ -675,6 +640,14 @@ export function renderConstellationAuthoringTool(root: HTMLElement): void {
             stars: state.stars,
             edges: state.edges,
           };
+
+          try {
+            validateConstellation(payload);
+          } catch (error) {
+            window.alert(error instanceof Error ? error.message : 'This constellation is invalid and cannot be exported.');
+            return;
+          }
+
           const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
           const objectUrl = URL.createObjectURL(blob);
           const anchor = document.createElement('a');

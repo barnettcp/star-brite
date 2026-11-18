@@ -148,6 +148,12 @@ body {
   color: var(--cat-text);
 }
 
+.cat-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .cat-layout {
   display: grid;
   grid-template-columns: minmax(180px, 220px) minmax(0, 1fr) minmax(180px, 220px);
