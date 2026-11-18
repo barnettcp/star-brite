@@ -35,6 +35,16 @@ function createBlankState(): CatState {
   };
 }
 
+function serializeCatPayload(state: CatState): string {
+  return JSON.stringify({
+    id: state.constellationId,
+    name: state.constellationName,
+    aiGenerated: state.aiGenerated,
+    stars: state.stars,
+    edges: state.edges,
+  });
+}
+
 const starterState: CatState = createBlankState();
 
 function clampGridValue(value: number): number {
@@ -103,12 +113,74 @@ function buildEdgePath(edge: [string, string], stars: CatStar[]): string {
 
 export function renderConstellationAuthoringTool(root: HTMLElement): void {
   let state: CatState = structuredClone(starterState);
+  let currentFileHandle: FileSystemFileHandle | null = null;
+  let currentFileName: string | null = null;
+  let lastSavedSnapshot = serializeCatPayload(state);
+
+  const getDirtyState = (): boolean => serializeCatPayload(state) !== lastSavedSnapshot;
+
+  async function saveCurrentFile(forcePrompt = false): Promise<void> {
+    const payload = {
+      id: state.constellationId,
+      name: state.constellationName,
+      aiGenerated: state.aiGenerated,
+      stars: state.stars,
+      edges: state.edges,
+    };
+
+    try {
+      validateConstellation(payload);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'This constellation is invalid and cannot be exported.');
+      return;
+    }
+
+    try {
+      const suggestedName = currentFileName ?? `${state.constellationId}.json`;
+      const canUsePicker = 'showSaveFilePicker' in window && (forcePrompt || currentFileHandle === null);
+
+      const targetHandle = canUsePicker
+        ? await (window as Window & { showSaveFilePicker?: (options?: { suggestedName?: string; types?: Array<{ description: string; accept: Record<string, string[]> }> }) => Promise<FileSystemFileHandle> }).showSaveFilePicker?.({
+          suggestedName,
+          types: [{ description: 'JSON Files', accept: { 'application/json': ['.json'] } }],
+        })
+        : currentFileHandle;
+
+      if (!targetHandle) {
+        throw new Error('No file target available.');
+      }
+
+      const writer = await targetHandle.createWritable();
+      await writer.write(JSON.stringify(payload, null, 2));
+      await writer.close();
+
+      currentFileHandle = targetHandle;
+      currentFileName = targetHandle.name ?? suggestedName;
+      lastSavedSnapshot = JSON.stringify(payload);
+      render();
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        return;
+      }
+
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = objectUrl;
+      anchor.download = currentFileName ?? `${state.constellationId}.json`;
+      anchor.click();
+      URL.revokeObjectURL(objectUrl);
+      lastSavedSnapshot = JSON.stringify(payload);
+      render();
+    }
+  }
 
   function render(): void {
     const selectedStar = state.stars.find((star) => star.id === state.selectedStarId) ?? null;
     const selectedEdge = state.selectedEdgeKey ? state.edges.find(([from, to]) => pairKey(from, to) === state.selectedEdgeKey) ?? null : null;
     const validationIssues = getValidationIssues(state);
     const isValid = validationIssues.length === 0;
+    const dirty = getDirtyState();
     const validationSummary = isValid ? 'Valid constellation' : `${validationIssues.length} validation issue${validationIssues.length === 1 ? '' : 's'}`;
     const validationStateClass = isValid ? 'ok' : 'warning';
     const canExport = isValid;
@@ -147,7 +219,8 @@ export function renderConstellationAuthoringTool(root: HTMLElement): void {
           <div class="cat-header-actions">
             <button type="button" class="cat-button secondary" data-action="new">New</button>
             <button type="button" class="cat-button secondary" data-action="load">Load</button>
-            <button type="button" class="cat-button primary" data-action="save" ${canExport ? '' : 'disabled'}>Save</button>
+            <button type="button" class="cat-button primary" data-action="save" ${canExport ? '' : 'disabled'}>${dirty ? 'Save*' : 'Save'}</button>
+            <button type="button" class="cat-button secondary" data-action="save-as">Save As...</button>
           </div>
         </header>
 
@@ -606,8 +679,19 @@ export function renderConstellationAuthoringTool(root: HTMLElement): void {
       button.addEventListener('click', () => {
         const action = button.dataset.action;
         if (action === 'new') {
+          if (getDirtyState() && !window.confirm('Discard unsaved changes and start a new constellation?')) {
+            return;
+          }
           state = createBlankState();
+          currentFileHandle = null;
+          currentFileName = null;
+          lastSavedSnapshot = serializeCatPayload(state);
           render();
+          return;
+        }
+
+        if (action === 'save-as') {
+          void saveCurrentFile(true);
           return;
         }
 
@@ -637,32 +721,15 @@ export function renderConstellationAuthoringTool(root: HTMLElement): void {
         }
 
         if (action === 'save') {
-          const payload = {
-            id: state.constellationId,
-            name: state.constellationName,
-            aiGenerated: state.aiGenerated,
-            stars: state.stars,
-            edges: state.edges,
-          };
-
-          try {
-            validateConstellation(payload);
-          } catch (error) {
-            window.alert(error instanceof Error ? error.message : 'This constellation is invalid and cannot be exported.');
-            return;
-          }
-
-          const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-          const objectUrl = URL.createObjectURL(blob);
-          const anchor = document.createElement('a');
-          anchor.href = objectUrl;
-          anchor.download = `${state.constellationId}.json`;
-          anchor.click();
-          URL.revokeObjectURL(objectUrl);
+          void saveCurrentFile(false);
           return;
         }
 
         if (action === 'load') {
+          if (getDirtyState() && !window.confirm('Discard unsaved changes and load another constellation?')) {
+            return;
+          }
+
           const input = document.createElement('input');
           input.type = 'file';
           input.accept = '.json,application/json';
@@ -683,7 +750,7 @@ export function renderConstellationAuthoringTool(root: HTMLElement): void {
                 };
                 const nextStars = Array.isArray(parsed.stars) ? parsed.stars : [];
                 const nextEdges = Array.isArray(parsed.edges) ? parsed.edges : [];
-                state = {
+                const nextState: CatState = {
                   constellationId: typeof parsed.id === 'string' ? parsed.id : state.constellationId,
                   constellationName: typeof parsed.name === 'string' ? parsed.name : state.constellationName,
                   aiGenerated: Boolean(parsed.aiGenerated),
@@ -694,6 +761,10 @@ export function renderConstellationAuthoringTool(root: HTMLElement): void {
                   selectedEdgeKey: null,
                   pendingEdgeStart: null,
                 };
+                state = nextState;
+                currentFileHandle = null;
+                currentFileName = file.name;
+                lastSavedSnapshot = serializeCatPayload(state);
                 render();
               } catch {
                 window.alert('Unable to load constellation JSON.');
