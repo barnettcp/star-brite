@@ -333,6 +333,41 @@ body {
   background-size: 10% 10%;
 }
 
+.cat-preview-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at center, rgba(17, 27, 41, 1) 0%, rgba(6, 13, 21, 1) 100%);
+}
+
+.cat-preview-layer {
+  width: 82%;
+  height: 82%;
+  max-width: 520px;
+  max-height: 520px;
+}
+
+.cat-preview-star {
+  fill: var(--cat-star);
+  stroke: rgba(255, 247, 165, 0.48);
+  stroke-width: 0.8;
+  filter: drop-shadow(0 0 10px rgba(245, 207, 128, 0.65));
+}
+
+.cat-preview-star.selected {
+  fill: var(--cat-star-selected);
+  stroke: rgba(255, 247, 165, 0.9);
+  stroke-width: 1.2;
+}
+
+.cat-preview-empty {
+  color: var(--cat-muted);
+  font-size: 0.9rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .cat-grid-cell {
   border: 1px solid transparent;
 }
@@ -387,6 +422,19 @@ body {
 .cat-edge-layer path.selected {
   stroke: var(--cat-star-selected);
   stroke-width: 2.4;
+}
+
+.cat-editor-surface.previewing .cat-preview-layer path {
+  fill: none;
+  stroke: var(--cat-edge);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.cat-editor-surface.previewing .cat-preview-layer path.selected {
+  stroke: var(--cat-star-selected);
+  stroke-width: 2.2;
 }
 
 .cat-status {

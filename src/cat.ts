@@ -1,6 +1,6 @@
 import { validateConstellation } from './core/constellation';
 
-type CatMode = 'star' | 'edge' | 'delete';
+type CatMode = 'star' | 'edge' | 'delete' | 'preview';
 
 type CatStar = {
   id: string;
@@ -69,6 +69,43 @@ function describeStarLocation(star: CatStar): string {
 
 function getEditorStarDisplaySize(size: number): number {
   return Math.max(8, 2.5 + size * 8);
+}
+
+function getPreviewLayout(stars: CatStar[]) {
+  if (stars.length === 0) {
+    return {
+      padding: 12,
+      scale: 1,
+      offsetX: 0,
+      offsetY: 0,
+      points: [],
+    };
+  }
+
+  const minX = Math.min(...stars.map((star) => star.x));
+  const minY = Math.min(...stars.map((star) => star.y));
+  const maxX = Math.max(...stars.map((star) => star.x));
+  const maxY = Math.max(...stars.map((star) => star.y));
+  const width = Math.max(maxX - minX, 1);
+  const height = Math.max(maxY - minY, 1);
+  const padding = 12;
+  const innerSize = 100 - padding * 2;
+  const scale = Math.min(innerSize / width, innerSize / height);
+
+  const points = stars.map((star) => ({
+    ...star,
+    x: padding + (star.x - minX) * scale,
+    y: padding + (star.y - minY) * scale,
+    radius: Math.max(1.6, star.size * 1.8),
+  }));
+
+  return {
+    padding,
+    scale,
+    offsetX: padding - minX * scale,
+    offsetY: padding - minY * scale,
+    points,
+  };
 }
 
 function getValidationIssues(state: CatState): string[] {
@@ -186,6 +223,7 @@ export function renderConstellationAuthoringTool(root: HTMLElement): void {
     const canExport = isValid;
 
     const listTitle = state.mode === 'edge' ? 'Edges' : 'Stars';
+    const previewLayout = getPreviewLayout(state.stars);
     const listItems = state.mode === 'edge'
       ? state.edges.length === 0
         ? '<li class="placeholder">No edges yet.</li>'
@@ -232,6 +270,7 @@ export function renderConstellationAuthoringTool(root: HTMLElement): void {
                 <button type="button" class="cat-tool-button ${state.mode === 'star' ? 'active' : ''}" data-mode="star">Star</button>
                 <button type="button" class="cat-tool-button ${state.mode === 'edge' ? 'active' : ''}" data-mode="edge">Edge</button>
                 <button type="button" class="cat-tool-button ${state.mode === 'delete' ? 'active' : ''}" data-mode="delete">Delete</button>
+                <button type="button" class="cat-tool-button ${state.mode === 'preview' ? 'active' : ''}" data-mode="preview">Preview</button>
               </div>
             </div>
 
@@ -260,29 +299,66 @@ export function renderConstellationAuthoringTool(root: HTMLElement): void {
           </aside>
 
           <main class="cat-editor-panel">
-            <div class="cat-editor-surface" aria-label="Constellation grid editor">
-              <div class="cat-grid" aria-hidden="true"></div>
-              ${state.stars
-                .map(
-                  (star) => `
-                    <button
-                      type="button"
-                      class="cat-star ${state.selectedStarId === star.id ? 'selected' : ''}"
-                      data-star-id="${star.id}"
-                      style="left: ${star.x}%; top: ${star.y}%; --display-star-size: ${getEditorStarDisplaySize(star.size)}px;"
-                      aria-label="Edit star ${star.id}"
-                    ></button>
-                  `,
-                )
-                .join('')}
-              <svg class="cat-edge-layer" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                ${state.edges
-                  .map((edge) => {
-                    const key = pairKey(edge[0], edge[1]);
-                    return `<path d="${buildEdgePath(edge, state.stars)}" data-edge-key="${key}" class="${state.selectedEdgeKey === key ? 'selected' : ''}"></path>`;
-                  })
-                  .join('')}
-              </svg>
+            <div class="cat-editor-surface ${state.mode === 'preview' ? 'previewing' : ''}" aria-label="Constellation grid editor">
+              ${state.mode === 'preview'
+                ? `
+                  <div class="cat-preview-overlay">
+                    ${state.stars.length === 0
+                      ? '<div class="cat-preview-empty">No stars to preview yet.</div>'
+                      : `
+                        <svg class="cat-preview-layer" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" aria-label="Constellation preview">
+                          ${state.edges
+                            .map((edge) => {
+                              const key = pairKey(edge[0], edge[1]);
+                              const from = previewLayout.points.find((star) => star.id === edge[0]);
+                              const to = previewLayout.points.find((star) => star.id === edge[1]);
+                              if (!from || !to) {
+                                return '';
+                              }
+                              return `<path d="M ${from.x} ${from.y} L ${to.x} ${to.y}" data-edge-key="${key}" class="${state.selectedEdgeKey === key ? 'selected' : ''}"></path>`;
+                            })
+                            .join('')}
+                          ${previewLayout.points
+                            .map(
+                              (star) => `
+                                <circle
+                                  cx="${star.x}"
+                                  cy="${star.y}"
+                                  r="${star.radius}"
+                                  class="cat-preview-star ${state.selectedStarId === star.id ? 'selected' : ''}"
+                                  data-star-id="${star.id}"
+                                />
+                              `,
+                            )
+                            .join('')}
+                        </svg>
+                      `}
+                  </div>
+                `
+                : `
+                  <div class="cat-grid" aria-hidden="true"></div>
+                  ${state.stars
+                    .map(
+                      (star) => `
+                        <button
+                          type="button"
+                          class="cat-star ${state.selectedStarId === star.id ? 'selected' : ''}"
+                          data-star-id="${star.id}"
+                          style="left: ${star.x}%; top: ${star.y}%; --display-star-size: ${getEditorStarDisplaySize(star.size)}px;"
+                          aria-label="Edit star ${star.id}"
+                        ></button>
+                      `,
+                    )
+                    .join('')}
+                  <svg class="cat-edge-layer" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                    ${state.edges
+                      .map((edge) => {
+                        const key = pairKey(edge[0], edge[1]);
+                        return `<path d="${buildEdgePath(edge, state.stars)}" data-edge-key="${key}" class="${state.selectedEdgeKey === key ? 'selected' : ''}"></path>`;
+                      })
+                      .join('')}
+                  </svg>
+                `}
             </div>
           </main>
 
