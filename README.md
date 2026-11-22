@@ -19,7 +19,7 @@ The player sees a reference card with a hidden constellation in canonical orient
 - `src/core/` — pure game logic and generation rules
 - `src/data/` — data loading and file validation
 - `src/ui/` — rendering, input, canvas lifecycle, and UI state
-- `public/constellations/` — constellation manifests and starter definitions
+- `public/constellations/` — manifest-driven constellation files and starter definitions; every shipped file is explicitly listed in `manifest.json`
 - `tests/` — automated validation, purity checks, and calibration sweep
 - `scripts/` — release build and release validation tooling
 

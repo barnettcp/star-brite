@@ -27,6 +27,7 @@ A running record. **Decided** = made by the project owner. **Default** = recomme
 | D19 | Starter data | Three AI-generated starter constellations, clearly named so they are never public. |
 | D20 | Tests | Tests establish the valid ranges of world-unit parameters (08, calibration sweep). |
 | D21 | Docs vs code | Documentation first; the bootstrap file drives a one-shot build later. |
+| D22 | Manifest workflow | The active content list is the manifest; every shipped constellation must be in `public/constellations/` and listed in `public/constellations/manifest.json` before it is considered live. |
 
 ## Defaults chosen as recommendations
 
