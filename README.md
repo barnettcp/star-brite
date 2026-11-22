@@ -19,7 +19,7 @@ The player sees a reference card with a hidden constellation in canonical orient
 - `src/core/` — pure game logic and generation rules
 - `src/data/` — data loading and file validation
 - `src/ui/` — rendering, input, canvas lifecycle, and UI state
-- `public/constellations/` — constellation manifests and starter definitions
+- `public/constellations/` — manifest-driven constellation files and starter definitions; every shipped file is explicitly listed in `manifest.json`
 - `tests/` — automated validation, purity checks, and calibration sweep
 - `scripts/` — release build and release validation tooling
 
@@ -75,6 +75,19 @@ npm run check:release
 ## Notes
 
 This project follows a layered architecture that keeps the core game logic pure and separate from rendering and input. The generation pipeline uses world units and deterministic seeding so the same configuration and viewport produce consistent results.
+
+## Constellation authoring and shipping workflow
+
+The project loads constellations through `public/constellations/manifest.json`, so the manifest is the source of truth for what is active in the game. The recommended workflow is:
+
+1. Author a constellation in the CAT or another local editor.
+2. Save the JSON as a draft and validate it against the repo schema.
+3. Move the final file into `public/constellations/`.
+4. Add the filename to `public/constellations/manifest.json`.
+5. Restart or reload the app and confirm the constellation is loaded.
+6. Treat the file as shipped only after it is manifest-listed and validated.
+
+Keep draft work separate from shipped content until it is intentionally added to the manifest. Do not assume a file in the repo is live just because it exists in `public/constellations/`; the manifest decides what the game actually loads.
 
 ## Disclaimer
 

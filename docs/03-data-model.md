@@ -129,6 +129,36 @@ Static hosting cannot list directories, so constellation files are listed in a m
 
 Adding your own constellation = add a file and list it in the manifest. No rebuild logic changes.
 
+## Hand-authored file management workflow **[Decided]**
+
+The repo treats the manifest as the source of truth for the active ship list. A constellation file is not considered part of the game until it is both saved in `public/constellations/` and listed in `public/constellations/manifest.json`.
+
+### Recommended workflow
+
+1. Create or edit a constellation in the CAT.
+2. Save the JSON to a local draft file or a browser download to a scratch location.
+3. Review the file and check that it validates cleanly against the project schema.
+4. Move the final JSON into `public/constellations/` using the project’s naming convention.
+5. Update `public/constellations/manifest.json` to include the file name in `files`.
+6. Load the app and confirm the constellation appears in the normal content pool.
+7. Only then treat the constellation as ready for gameplay or release.
+
+### File naming and organization
+
+- Prefer one file per set or theme, not one file per tiny revision. Examples: `hand-authored-northern.json`, `hand-authored-fables.json`, `seasonal.json`.
+- Use lowercase kebab-case names for file names and stable, descriptive constellation ids.
+- Keep draft work separate from shipping work until it is validated and manifest-listed.
+- Reserve `ai-starters.json` for historical or dev-only starter examples and do not use it for long-term authored content.
+
+### Rules for draft vs shipped content
+
+- Drafts may live outside the manifest or in a clearly named draft folder until they are ready.
+- Only manifest-listed files are counted as shipped content.
+- If a constellation is not in the manifest, it is not active in the game.
+- Do not push a new constellation into the repo without updating the manifest in the same change set.
+
+This keeps authoring flexible while preserving a single, visible list of what the game will load.
+
 ## Authoring guide (graph paper → JSON)
 
 1. Draw on a 10×10 grid; each square is 10 canonical units. Mark 4–7 stars.

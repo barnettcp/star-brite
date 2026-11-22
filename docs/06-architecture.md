@@ -78,6 +78,24 @@ manifest.json ─► load.ts ─► validate/normalize (core/constellation)
 4. Size the canvas for the device pixel ratio (cap `render.maxDpr`), draw, attach input.
 5. On generation error, show a readable message on screen instead of a blank page.
 
+## Constellation authoring workflow **[Decided]**
+
+The repo treats the constellation manifest as the ship list. A constellation is only considered active when both of these are true:
+
+- the file exists in `public/constellations/`
+- the file name is included in `public/constellations/manifest.json`
+
+Recommended process:
+
+1. Create or edit a constellation with the CAT or a local authoring pass.
+2. Save the JSON as a draft and validate it against the canonical schema.
+3. Move the validated file into `public/constellations/`.
+4. Update `manifest.json` to include the file.
+5. Load the app and confirm it appears in the active pool.
+6. Only then consider the constellation ready for gameplay or release.
+
+This keeps the manifest as the explicit front door for live content and prevents ad hoc JSON files from silently becoming part of the game.
+
 ## URL overrides **[Default]**
 
 A cheap tuning path for working with your daughter, no panel needed:
