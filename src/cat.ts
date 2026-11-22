@@ -67,6 +67,8 @@ function describeStarLocation(star: CatStar): string {
   return `${star.x}, ${star.y}`;
 }
 
+// The editor and preview use a presentation-layer scale so the CAT remains readable without
+// changing the canonical constellation data contract used by the game.
 function getEditorStarDisplaySize(size: number): number {
   return Math.max(8, 2.5 + size * 8);
 }
@@ -713,6 +715,21 @@ export function renderConstellationAuthoringTool(root: HTMLElement): void {
           return;
         }
 
+        state.selectedEdgeKey = edgeKey;
+        state.selectedStarId = null;
+        state.pendingEdgeStart = null;
+        render();
+      });
+    });
+
+    root.querySelectorAll<SVGPathElement>('.cat-preview-layer path[data-edge-key]').forEach((edgePath) => {
+      edgePath.addEventListener('click', (event) => {
+        const edgeKey = edgePath.dataset.edgeKey;
+        if (!edgeKey) {
+          return;
+        }
+
+        event.stopPropagation();
         state.selectedEdgeKey = edgeKey;
         state.selectedStarId = null;
         state.pendingEdgeStart = null;

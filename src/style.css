@@ -346,13 +346,30 @@ body {
   height: 82%;
   max-width: 520px;
   max-height: 520px;
+  padding: 0.75rem;
+}
+
+.cat-preview-layer path {
+  fill: none;
+  stroke: var(--cat-edge);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  cursor: pointer;
+  transition: stroke-width 0.12s ease, stroke 0.12s ease;
+}
+
+.cat-preview-layer path.selected {
+  stroke: var(--cat-star-selected);
+  stroke-width: 2.4;
 }
 
 .cat-preview-star {
   fill: var(--cat-star);
   stroke: rgba(255, 247, 165, 0.48);
   stroke-width: 0.8;
-  filter: drop-shadow(0 0 10px rgba(245, 207, 128, 0.65));
+  cursor: pointer;
+  filter: drop-shadow(0 0 12px rgba(245, 207, 128, 0.7));
 }
 
 .cat-preview-star.selected {
